@@ -45,6 +45,8 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
       animation: widget.menuStore,
       builder: (context, _) {
         return ExpansionPanelList(
+          elevation: 0,
+          dividerColor: Colors.white.withValues(alpha: 0.1),
           expandedHeaderPadding: EdgeInsets.zero,
           expansionCallback: (int index, bool isExpanded) {
             setState(() {
@@ -53,17 +55,23 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
           },
           children: [
             ExpansionPanel(
+              backgroundColor: Colors.white.withValues(alpha: 0.05),
               isExpanded: _isExpanded,
               headerBuilder: (BuildContext context, bool isExpanded) {
                 return const ListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   title: Text(
                     'Resumo Financeiro',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                 );
               },
               body: Padding(
-                padding: const EdgeInsets.all(12.0),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: widget.menuStore.sections.map((section) {
@@ -293,49 +301,99 @@ class _MenuSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 14,
-            runSpacing: 14,
-            children: [
-              for (final item in items)
-                Stack(
-                  children: [
-                    FinanceCard(
-                      title: item.title,
-                      value: resolveValue(item),
-                      color: resolveColor(item),
-                      onTap: onTap(item),
-                    ),
-                    Positioned(
-                      right: 6,
-                      top: 6,
-                      child: InkWell(
-                        onTap: () => onRemove(item.id),
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.4),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.close, size: 14, color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ],
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
                 ),
-              _AddCard(onTap: onAdd),
-            ],
-          ),
-        ],
+                const Spacer(),
+                Container(
+                  height: 24,
+                  width: 24,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.drag_indicator, size: 14, color: Colors.white70),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                final crossAxisCount = width >= 900
+                    ? 4
+                    : width >= 640
+                        ? 3
+                        : 2;
+                final childAspectRatio = width >= 640 ? 1.55 : 1.35;
+
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: items.length + 1,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    childAspectRatio: childAspectRatio,
+                  ),
+                  itemBuilder: (context, index) {
+                    if (index < items.length) {
+                      final item = items[index];
+                      return Stack(
+                        children: [
+                          Positioned.fill(
+                            child: FinanceCard(
+                              title: item.title,
+                              value: resolveValue(item),
+                              color: resolveColor(item),
+                              onTap: onTap(item),
+                            ),
+                          ),
+                          Positioned(
+                            right: 6,
+                            top: 6,
+                            child: InkWell(
+                              onTap: () => onRemove(item.id),
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.4),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close, size: 14, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    return _AddCard(onTap: onAdd);
+                  },
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -352,8 +410,6 @@ class _AddCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Ink(
-        width: 160,
-        height: 120,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
@@ -387,9 +443,7 @@ class FinanceCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Ink(
-        width: 160,
-        height: 120,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(

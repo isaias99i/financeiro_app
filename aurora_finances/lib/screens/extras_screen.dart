@@ -102,6 +102,10 @@ class _ExtrasScreenState extends State<ExtrasScreen> {
             children: [
               TextField(
                 controller: noteController,
+                keyboardType: TextInputType.text,
+                textCapitalization: TextCapitalization.words,
+                enableSuggestions: true,
+                autocorrect: true,
                 decoration: const InputDecoration(labelText: 'Descricao'),
               ),
               TextField(
