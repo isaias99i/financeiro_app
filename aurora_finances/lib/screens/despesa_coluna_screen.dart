@@ -80,7 +80,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                 const SizedBox(height: 12),
                 Expanded(
                   child: entries.isEmpty
-                      ? const _EmptyEntries()
+                      ? _EmptyEntries(onAdd: _showAddDialog)
                       : ListView.separated(
                           itemCount: entries.length,
                           separatorBuilder: (_, _) => const SizedBox(height: 10),
@@ -111,7 +111,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                                     ),
                                     const SizedBox(width: 6),
                                     IconButton(
-                                      onPressed: () => widget.store.removeEntry(entry.id),
+                                      onPressed: () => _removeEntry(entry),
                                       icon: const Icon(Icons.delete_outline, color: Colors.white70),
                                     ),
                                   ],
@@ -342,6 +342,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                       }
                     }
                     Navigator.pop(context);
+                    _showSnack('Gasto salvo');
                   },
                   child: Text(entry == null ? 'Adicionar' : 'Salvar'),
                 ),
@@ -434,6 +435,21 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
     );
   }
 
+  void _removeEntry(ExpenseEntry entry) {
+    widget.store.removeEntry(entry.id);
+    _showSnack('Gasto removido');
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(milliseconds: 1600),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.white.withValues(alpha: 0.12),
+      ),
+    );
+  }
 }
 
 class _HeaderSummary extends StatelessWidget {
@@ -495,7 +511,9 @@ class _HeaderSummary extends StatelessWidget {
 }
 
 class _EmptyEntries extends StatelessWidget {
-  const _EmptyEntries();
+  final VoidCallback onAdd;
+
+  const _EmptyEntries({required this.onAdd});
 
   @override
   Widget build(BuildContext context) {
@@ -507,14 +525,28 @@ class _EmptyEntries extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
         ),
-        child: const Text(
-          'Nenhum gasto cadastrado neste mes.',
-          style: TextStyle(color: Colors.white),
-          textAlign: TextAlign.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.receipt_long, color: Colors.white70, size: 32),
+            const SizedBox(height: 8),
+            const Text(
+              'Nenhum gasto cadastrado neste mês.',
+              style: TextStyle(color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: onAdd,
+              icon: const Icon(Icons.add),
+              label: const Text('Adicionar gasto'),
+            ),
+          ],
         ),
       ),
     );
   }
 }
+
 
 

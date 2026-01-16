@@ -99,7 +99,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
                 const SizedBox(height: 12),
                 Expanded(
                   child: widget.store.groups.isEmpty
-                      ? const _EmptyState()
+                      ? _EmptyState(onAddGroup: _addGroup)
                       : ListView.separated(
                           itemCount: widget.store.groups.length,
                           separatorBuilder: (_, _) => const SizedBox(height: 10),
@@ -247,6 +247,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
     );
     if (title == null || title.trim().isEmpty) return;
     widget.store.addGroup(title.trim());
+    _showSnack('Grupo criado');
   }
 
   Future<void> _editGroup(ExpenseGroup group) async {
@@ -271,6 +272,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
       result.title,
       requiresEntries: result.requiresEntries,
     );
+    _showSnack('Coluna adicionada');
   }
 
   Future<void> _addColumnForGroup(ExpenseGroup group) async {
@@ -281,6 +283,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
       result.title,
       requiresEntries: result.requiresEntries,
     );
+    _showSnack('Coluna adicionada');
   }
 
   Future<void> _editColumn(ExpenseGroup group, ExpenseColumn column) async {
@@ -410,6 +413,17 @@ class _DespesasScreenState extends State<DespesasScreen> {
       },
     );
   }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(milliseconds: 1600),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.white.withValues(alpha: 0.12),
+      ),
+    );
+  }
 }
 
 class _ColumnInput {
@@ -500,7 +514,9 @@ class _MonthSelector extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  final VoidCallback onAddGroup;
+
+  const _EmptyState({required this.onAddGroup});
 
   @override
   Widget build(BuildContext context) {
@@ -512,10 +528,23 @@ class _EmptyState extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
         ),
-        child: const Text(
-          'Nenhum grupo criado. Crie um grupo para comecar.',
-          style: TextStyle(color: Colors.white),
-          textAlign: TextAlign.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.folder_open, color: Colors.white70, size: 32),
+            const SizedBox(height: 8),
+            const Text(
+              'Nenhum grupo criado. Crie um grupo para começar.',
+              style: TextStyle(color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: onAddGroup,
+              icon: const Icon(Icons.add),
+              label: const Text('Criar grupo'),
+            ),
+          ],
         ),
       ),
     );

@@ -19,7 +19,8 @@ class AuroraScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mediaPadding = MediaQuery.of(context).padding;
-    final topInset = (appBar != null ? kToolbarHeight : 0.0) + mediaPadding.top;
+    final topInset =
+        (appBar?.preferredSize.height ?? 0.0) + mediaPadding.top;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
