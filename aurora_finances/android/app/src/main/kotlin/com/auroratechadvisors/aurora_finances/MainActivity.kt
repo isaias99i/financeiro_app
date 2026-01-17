@@ -1,4 +1,4 @@
-package com.example.aurora_finances
+package com.auroratechadvisors.aurora_finances
 
 import io.flutter.embedding.android.FlutterActivity
 
