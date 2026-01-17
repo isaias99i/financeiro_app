@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../data/carteira_store.dart';
 import '../models/carteira_models.dart';
 import '../utils/currency_input_formatter.dart';
+import '../widgets/app_settings_scope.dart';
 
 class CarteiraWidget extends StatefulWidget {
   final CarteiraStore store;
@@ -38,7 +41,7 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final format = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    final format = AppSettingsScope.of(context).currencyFormatter();
     final total = widget.store.totalBalance;
     final status = _buildStatus(total, widget.expectedBalance, format);
     final banks = _sortedBanks(widget.store.banks);
@@ -83,6 +86,10 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
               ),
             ],
           ),
+        ],
+        if (banks.isNotEmpty && total > 0) ...[
+          const SizedBox(height: 12),
+          _PieCard(banks: banks, total: total, formatter: format),
         ],
         const SizedBox(height: 10),
         ExpansionPanelList(
@@ -242,11 +249,15 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
   }
 
   void _saveInlineEdit(BankAccount bank) {
+    final settings = AppSettingsScope.of(context);
     final name = _nameControllerFor(bank).text.trim();
     final balance = parseCurrencyToDouble(
       _balanceControllerFor(
         bank,
-        NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$'),
+        NumberFormat.currency(
+          locale: settings.currencyLocale,
+          symbol: settings.currencySymbol,
+        ),
       ).text,
     );
     if (name.isEmpty) {
@@ -275,10 +286,6 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
         backgroundColor: Colors.white.withValues(alpha: 0.12),
       ),
     );
-  }
-
-  void _showEditBankDialog(BankAccount bank) {
-    _showBankDialog(existing: bank);
   }
 
   void _showBankDialog({BankAccount? existing}) {
@@ -310,7 +317,10 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
                       controller: balanceController,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
-                        CurrencyInputFormatter(locale: 'pt_BR', symbol: 'R\$'),
+                        CurrencyInputFormatter(
+                          locale: AppSettingsScope.of(context).currencyLocale,
+                          symbol: AppSettingsScope.of(context).currencySymbol,
+                        ),
                       ],
                       decoration: const InputDecoration(labelText: 'Saldo'),
                     ),
@@ -424,7 +434,7 @@ class _BankCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final format = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    final format = AppSettingsScope.of(context).currencyFormatter();
     final ratio = totalBalance <= 0 ? 0.0 : (bank.balance / totalBalance).clamp(0.0, 1.0);
     final percent = (ratio * 100).toStringAsFixed(0);
 
@@ -482,7 +492,10 @@ class _BankCard extends StatelessWidget {
                         controller: balanceController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         inputFormatters: [
-                          CurrencyInputFormatter(locale: 'pt_BR', symbol: 'R\$'),
+                          CurrencyInputFormatter(
+                            locale: AppSettingsScope.of(context).currencyLocale,
+                            symbol: AppSettingsScope.of(context).currencySymbol,
+                          ),
                         ],
                         maxLines: 1,
                         decoration: const InputDecoration(
@@ -575,6 +588,103 @@ class _AddBankCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _PieCard extends StatelessWidget {
+  final List<BankAccount> banks;
+  final double total;
+  final NumberFormat formatter;
+
+  const _PieCard({
+    required this.banks,
+    required this.total,
+    required this.formatter,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Distribuicao por banco',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                formatter.format(total),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Center(
+            child: SizedBox(
+              width: 160,
+              height: 160,
+              child: CustomPaint(
+                painter: _PieChartPainter(
+                  banks: banks,
+                  total: total,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PieChartPainter extends CustomPainter {
+  final List<BankAccount> banks;
+  final double total;
+
+  _PieChartPainter({
+    required this.banks,
+    required this.total,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (total <= 0) {
+      return;
+    }
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    var startAngle = -math.pi / 2;
+    for (final bank in banks) {
+      if (bank.balance <= 0) {
+        continue;
+      }
+      final sweep = (bank.balance / total) * math.pi * 2;
+      final paint = Paint()
+        ..style = PaintingStyle.fill
+        ..color = Color(bank.colorValue);
+      canvas.drawArc(rect, startAngle, sweep, true, paint);
+      startAngle += sweep;
+    }
+
+  }
+
+  @override
+  bool shouldRepaint(covariant _PieChartPainter oldDelegate) {
+    return oldDelegate.banks != banks || oldDelegate.total != total;
   }
 }
 

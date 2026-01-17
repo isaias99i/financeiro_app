@@ -164,6 +164,22 @@ class DespesasStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setFixedValueFromMonth(
+    DateTime start,
+    DateTime end,
+    ExpenseColumn column,
+    double value,
+  ) {
+    var current = DateTime(start.year, start.month, 1);
+    final last = DateTime(end.year, end.month, 1);
+    while (!current.isAfter(last)) {
+      _simpleValues[_simpleKey(current, column.id)] = value;
+      current = DateTime(current.year, current.month + 1, 1);
+    }
+    _persist();
+    notifyListeners();
+  }
+
   void addEntry(ExpenseEntry entry) {
     _entries.add(entry);
     _persist();

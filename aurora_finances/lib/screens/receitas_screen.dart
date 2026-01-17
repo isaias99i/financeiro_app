@@ -6,6 +6,7 @@ import '../models/receitas_models.dart';
 import '../utils/currency_input_formatter.dart';
 import '../utils/month_key.dart';
 import '../widgets/aurora_scaffold.dart';
+import '../widgets/app_settings_scope.dart';
 
 class ReceitasScreen extends StatefulWidget {
   final ReceitasStore store;
@@ -20,14 +21,6 @@ class _ReceitasScreenState extends State<ReceitasScreen>
     with SingleTickerProviderStateMixin {
   static final DateTime _startDate = DateTime(2026, 1, 1);
   static final DateTime _endDate = DateTime(2030, 12, 1);
-  static const List<String> _extraSuggestions = [
-    'Freelance',
-    'Bonus',
-    'Comissao',
-    'Reembolso',
-    'Venda',
-  ];
-
   final Map<String, TextEditingController> _salaryControllers = {};
   late TabController _tabController;
   bool _showExtrasFab = false;
@@ -57,7 +50,8 @@ class _ReceitasScreenState extends State<ReceitasScreen>
 
   @override
   Widget build(BuildContext context) {
-    final moneyFormatter = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    final settings = AppSettingsScope.of(context);
+    final moneyFormatter = settings.currencyFormatter();
 
     return AuroraScaffold(
       appBar: AppBar(
@@ -90,9 +84,10 @@ class _ReceitasScreenState extends State<ReceitasScreen>
               _MonthlyCards(
                 months: _buildMonths(),
                 moneyFormatter: moneyFormatter,
+                monthFormatter: settings.monthYearFormatter(),
                 salaryControllerFor: _controllerFor,
                 onSalaryChanged: _updateSalary,
-                onSalarySaved: () => _showSnack('Salario atualizado'),
+                onSalarySaved: _applySalaryFromMonth,
                 extrasForMonth: widget.store.extrasTotalForMonth,
               ),
               _ExtrasList(
@@ -139,6 +134,25 @@ class _ReceitasScreenState extends State<ReceitasScreen>
     widget.store.setSalaryForMonth(date, parsed);
   }
 
+  void _applySalaryFromMonth(DateTime date) {
+    final formatter = AppSettingsScope.of(context).currencyFormatter();
+    final controller = _controllerFor(date, formatter);
+    final value = parseCurrencyToDouble(controller.text);
+    widget.store.setSalaryFromMonth(date, _endDate, value);
+
+    for (final month in _buildMonths()) {
+      if (month.isBefore(date)) {
+        continue;
+      }
+      final key = monthKey(month);
+      final existing = _salaryControllers[key];
+      if (existing != null) {
+        existing.text = formatter.format(value);
+      }
+    }
+    _showSnack('Salario atualizado');
+  }
+
   void _removeExtra(ExtraEntry entry) {
     final updated = widget.store.extras.toList()..remove(entry);
     widget.store.setExtras(updated);
@@ -154,6 +168,7 @@ class _ReceitasScreenState extends State<ReceitasScreen>
   }
 
   Future<void> _showExtraDialog({ExtraEntry? entry}) async {
+    final settings = AppSettingsScope.of(context);
     final noteController = TextEditingController(text: entry?.note ?? '');
     final amountController = TextEditingController(
       text: entry != null ? entry.amount.toStringAsFixed(2) : '',
@@ -165,112 +180,209 @@ class _ReceitasScreenState extends State<ReceitasScreen>
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Adicionar extra'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: noteController,
-                      keyboardType: TextInputType.text,
-                      textCapitalization: TextCapitalization.words,
-                      enableSuggestions: true,
-                      autocorrect: true,
-                      decoration: const InputDecoration(labelText: 'Descricao'),
-                    ),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: _extraSuggestions.map((label) {
-                          return ActionChip(
-                            label: Text(label),
-                            onPressed: () => setState(() {
-                              noteController.text = label;
-                              noteController.selection = TextSelection.collapsed(
-                                offset: label.length,
-                              );
-                            }),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: amountController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        CurrencyInputFormatter(locale: 'pt_BR', symbol: 'R\$'),
-                      ],
-                      decoration: const InputDecoration(labelText: 'Valor'),
-                    ),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        icon: const Icon(Icons.calendar_today),
-                        label: Text(DateFormat('dd/MM/yyyy').format(selectedDate)),
-                        onPressed: () async {
-                          final picked = await _pickDate(
-                            context: context,
-                            initialDate: selectedDate,
-                          );
-                          if (picked != null) {
-                            setState(() => selectedDate = picked);
-                          }
-                        },
-                      ),
+            final inputDecoration = InputDecoration(
+              filled: true,
+              fillColor: Colors.white.withValues(alpha: 0.06),
+              labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF7FD7FF), width: 1.4),
+              ),
+            );
+
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF101B24),
+                      Color(0xFF183446),
+                    ],
+                  ),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.45),
+                      blurRadius: 20,
+                      offset: const Offset(0, 12),
                     ),
                   ],
                 ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancelar'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    final amount = parseCurrencyToDouble(amountController.text);
-                    if (amount <= 0) {
-                      return;
-                    }
-                    final updated = widget.store.extras.toList();
-                    if (entry == null) {
-                      updated.add(
-                        ExtraEntry(
-                          date: selectedDate,
-                          amount: amount,
-                          note: noteController.text.trim(),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.08),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.auto_awesome, color: Color(0xFF7FD7FF)),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  entry == null ? 'Incluir extra' : 'Editar extra',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Registre entradas fora do salario mensal.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white.withValues(alpha: 0.65),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close, color: Colors.white70),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: noteController,
+                        keyboardType: TextInputType.text,
+                        textCapitalization: TextCapitalization.words,
+                        enableSuggestions: true,
+                        autocorrect: true,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: inputDecoration.copyWith(labelText: 'Descricao'),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: amountController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [
+                          CurrencyInputFormatter(
+                            locale: settings.currencyLocale,
+                            symbol: settings.currencySymbol,
+                          ),
+                        ],
+                        style: const TextStyle(color: Colors.white),
+                        decoration: inputDecoration.copyWith(labelText: 'Valor'),
+                      ),
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          icon: const Icon(Icons.calendar_today, color: Colors.white70),
+                          label: Text(
+                            settings.dateFormatter().format(selectedDate),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            backgroundColor: Colors.white.withValues(alpha: 0.08),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+                            ),
+                          ),
+                          onPressed: () async {
+                            final picked = await _pickDate(
+                              context: context,
+                              initialDate: selectedDate,
+                            );
+                            if (picked != null) {
+                              setState(() => selectedDate = picked);
+                            }
+                          },
                         ),
-                      );
-                    } else {
-                      final index = updated.indexOf(entry);
-                      if (index != -1) {
-                        updated[index] = ExtraEntry(
-                          date: selectedDate,
-                          amount: amount,
-                          note: noteController.text.trim(),
-                        );
-                      }
-                    }
-                    widget.store.setExtras(updated);
-                    Navigator.pop(context);
-                    _showSnack(entry == null ? 'Extra adicionado' : 'Extra atualizado');
-                  },
-                  child: Text(entry == null ? 'Adicionar' : 'Salvar'),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white70,
+                                side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text('Cancelar'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                final amount = parseCurrencyToDouble(amountController.text);
+                                if (amount <= 0) {
+                                  return;
+                                }
+                                final updated = widget.store.extras.toList();
+                                if (entry == null) {
+                                  updated.add(
+                                    ExtraEntry(
+                                      date: selectedDate,
+                                      amount: amount,
+                                      note: noteController.text.trim(),
+                                    ),
+                                  );
+                                } else {
+                                  final index = updated.indexOf(entry);
+                                  if (index != -1) {
+                                    updated[index] = ExtraEntry(
+                                      date: selectedDate,
+                                      amount: amount,
+                                      note: noteController.text.trim(),
+                                    );
+                                  }
+                                }
+                                widget.store.setExtras(updated);
+                                Navigator.pop(context);
+                                _showSnack(entry == null ? 'Extra adicionado' : 'Extra atualizado');
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF3C8FD9),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              child: Text(entry == null ? 'Adicionar' : 'Salvar'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             );
           },
         );
       },
     );
   }
-
   Future<DateTime?> _pickDate({
     required BuildContext context,
     required DateTime initialDate,
@@ -310,14 +422,16 @@ class _ReceitasScreenState extends State<ReceitasScreen>
 class _MonthlyCards extends StatelessWidget {
   final List<DateTime> months;
   final NumberFormat moneyFormatter;
+  final DateFormat monthFormatter;
   final TextEditingController Function(DateTime, NumberFormat) salaryControllerFor;
   final void Function(DateTime, String) onSalaryChanged;
-  final VoidCallback onSalarySaved;
+  final void Function(DateTime) onSalarySaved;
   final double Function(DateTime) extrasForMonth;
 
   const _MonthlyCards({
     required this.months,
     required this.moneyFormatter,
+    required this.monthFormatter,
     required this.salaryControllerFor,
     required this.onSalaryChanged,
     required this.onSalarySaved,
@@ -326,8 +440,6 @@ class _MonthlyCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final monthFormatter = DateFormat('MMMM yyyy', 'pt_BR');
-
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: months.length,
@@ -343,7 +455,7 @@ class _MonthlyCards extends StatelessWidget {
           title: monthFormatter.format(date),
           salaryController: salario,
           onSalaryChanged: (value) => onSalaryChanged(date, value),
-          onSalarySaved: onSalarySaved,
+          onSalarySaved: () => onSalarySaved(date),
           extrasLabel: moneyFormatter.format(extras),
           totalLabel: moneyFormatter.format(total),
         );
@@ -371,6 +483,7 @@ class _ReceitaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = AppSettingsScope.of(context);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -392,21 +505,32 @@ class _ReceitaCard extends StatelessWidget {
           const SizedBox(height: 10),
           _ReceitaRow(
             label: 'Salario',
-            child: TextField(
-              controller: salaryController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                CurrencyInputFormatter(locale: 'pt_BR', symbol: 'R\$'),
-              ],
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                isDense: true,
-                hintText: '0,00',
-                hintStyle: TextStyle(color: Colors.white54),
+            child: Focus(
+              onFocusChange: (hasFocus) {
+                if (!hasFocus) {
+                  onSalarySaved();
+                }
+              },
+              child: TextField(
+                controller: salaryController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  CurrencyInputFormatter(
+                    locale: settings.currencyLocale,
+                    symbol: settings.currencySymbol,
+                  ),
+                ],
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  isDense: true,
+                  hintText: '0,00',
+                  hintStyle: TextStyle(color: Colors.white54),
+                ),
+                onChanged: onSalaryChanged,
+                onEditingComplete: onSalarySaved,
+                onSubmitted: (_) => onSalarySaved(),
               ),
-              onChanged: onSalaryChanged,
-              onEditingComplete: onSalarySaved,
             ),
           ),
           const SizedBox(height: 8),
@@ -483,6 +607,8 @@ class _ExtrasList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = AppSettingsScope.of(context);
+    final dateFormatter = settings.dateFormatter();
     final filtered = filterMonth == null
         ? entries
         : entries
@@ -520,7 +646,7 @@ class _ExtrasList extends StatelessWidget {
               style: const TextStyle(color: Colors.white),
             ),
             subtitle: Text(
-              DateFormat('dd/MM/yyyy').format(entry.date),
+              dateFormatter.format(entry.date),
               style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
             ),
             trailing: Row(
@@ -560,7 +686,7 @@ class _ExtrasFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatter = DateFormat('MMM/yyyy', 'pt_BR');
+    final formatter = AppSettingsScope.of(context).shortMonthYearFormatter();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(

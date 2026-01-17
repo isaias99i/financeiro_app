@@ -21,8 +21,23 @@ class ReceitasStore extends ChangeNotifier {
     return _salaryByMonth[monthKey(date)] ?? 0.0;
   }
 
+  bool hasSalaryForMonth(DateTime date) {
+    return _salaryByMonth.containsKey(monthKey(date));
+  }
+
   void setSalaryForMonth(DateTime date, double value) {
     _salaryByMonth[monthKey(date)] = value;
+    _persist();
+    notifyListeners();
+  }
+
+  void setSalaryFromMonth(DateTime start, DateTime end, double value) {
+    var current = DateTime(start.year, start.month, 1);
+    final last = DateTime(end.year, end.month, 1);
+    while (!current.isAfter(last)) {
+      _salaryByMonth[monthKey(current)] = value;
+      current = DateTime(current.year, current.month + 1, 1);
+    }
     _persist();
     notifyListeners();
   }

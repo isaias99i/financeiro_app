@@ -3,14 +3,18 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../data/despesas_store.dart';
+import '../data/categories_store.dart';
 import '../models/despesas_models.dart';
 import '../utils/currency_input_formatter.dart';
 import '../utils/month_key.dart';
 import '../widgets/aurora_badge.dart';
 import '../widgets/aurora_scaffold.dart';
+import '../screens/categorias_screen.dart';
+import '../widgets/app_settings_scope.dart';
 
 class DespesaColunaScreen extends StatefulWidget {
   final DespesasStore store;
+  final CategoriesStore categoriesStore;
   final ExpenseGroup group;
   final ExpenseColumn column;
   final DateTime initialMonth;
@@ -18,6 +22,7 @@ class DespesaColunaScreen extends StatefulWidget {
   const DespesaColunaScreen({
     super.key,
     required this.store,
+    required this.categoriesStore,
     required this.group,
     required this.column,
     required this.initialMonth,
@@ -38,13 +43,17 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
       widget.initialMonth.month,
       1,
     );
+    if (!widget.categoriesStore.isLoaded) {
+      widget.categoriesStore.load();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final dateFormatter = DateFormat('dd/MM/yyyy');
-    final monthFormatter = DateFormat('MMMM yyyy', 'pt_BR');
-    final moneyFormatter = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    final settings = AppSettingsScope.of(context);
+    final dateFormatter = settings.dateFormatter();
+    final monthFormatter = settings.monthYearFormatter();
+    final moneyFormatter = settings.currencyFormatter();
 
     return AuroraScaffold(
       appBar: AppBar(
@@ -54,6 +63,11 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
             onPressed: () => _pickMonth(context),
             icon: const Icon(Icons.calendar_today),
             tooltip: 'Alterar mes',
+          ),
+          IconButton(
+            onPressed: _openCategories,
+            icon: const Icon(Icons.category),
+            tooltip: 'Categorias',
           ),
         ],
       ),
@@ -159,7 +173,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
   }
 
   Future<void> _showEntryDialog({ExpenseEntry? entry}) async {
-    final categoryController = TextEditingController(text: entry?.category ?? '');
+    final settings = AppSettingsScope.of(context);
     final reasonController = TextEditingController(text: entry?.reason ?? '');
     final amountController = TextEditingController(
       text: entry != null ? entry.amount.toStringAsFixed(2) : '',
@@ -173,6 +187,14 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
       text: entry?.installmentIndex?.toString() ?? '1',
     );
     DateTime purchaseDate = entry?.purchaseDate ?? _selectedMonth;
+    final categoryList = widget.categoriesStore.categories.toList();
+    final entryCategory = entry?.category.trim() ?? '';
+    if (entryCategory.isNotEmpty && !categoryList.contains(entryCategory)) {
+      categoryList.insert(0, entryCategory);
+    }
+    String? selectedCategory = categoryList.isNotEmpty
+        ? (entryCategory.isNotEmpty ? entryCategory : categoryList.first)
+        : null;
 
     await showDialog<void>(
       context: context,
@@ -185,15 +207,50 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextField(
-                      controller: categoryController,
-                      keyboardType: TextInputType.text,
-                      textCapitalization: TextCapitalization.words,
-                      enableSuggestions: true,
-                      autocorrect: true,
-                      decoration: const InputDecoration(labelText: 'Categoria'),
-                    ),
-                    const SizedBox(height: 8),
+                    if (categoryList.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Nenhuma categoria cadastrada.',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            const SizedBox(height: 6),
+                            TextButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _openCategories();
+                              },
+                              icon: const Icon(Icons.category),
+                              label: const Text('Gerenciar categorias'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (categoryList.isNotEmpty)
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedCategory,
+                        decoration: const InputDecoration(labelText: 'Categoria'),
+                        items: categoryList
+                            .map(
+                              (category) => DropdownMenuItem(
+                                value: category,
+                                child: Text(category),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() => selectedCategory = value);
+                        },
+                      ),
+                    if (categoryList.isNotEmpty) const SizedBox(height: 8),
                     TextField(
                       controller: reasonController,
                       keyboardType: TextInputType.text,
@@ -207,7 +264,10 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                       controller: amountController,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
-                        CurrencyInputFormatter(locale: 'pt_BR', symbol: 'R\$'),
+                        CurrencyInputFormatter(
+                          locale: settings.currencyLocale,
+                          symbol: settings.currencySymbol,
+                        ),
                       ],
                       decoration: const InputDecoration(labelText: 'Valor'),
                     ),
@@ -252,7 +312,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                             child: TextButton.icon(
                               icon: const Icon(Icons.calendar_today),
                               label: Text(
-                                'Data da compra: ${DateFormat('dd/MM/yyyy').format(purchaseDate)}',
+                                'Data da compra: ${settings.dateFormatter().format(purchaseDate)}',
                               ),
                               onPressed: () async {
                                 final picked = await _pickDate(
@@ -272,7 +332,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                         alignment: Alignment.centerLeft,
                         child: TextButton.icon(
                           icon: const Icon(Icons.calendar_today),
-                          label: Text(DateFormat('dd/MM/yyyy').format(selectedDate)),
+                          label: Text(settings.dateFormatter().format(selectedDate)),
                           onPressed: () async {
                             final picked = await _pickDate(
                               context: context,
@@ -294,6 +354,9 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () {
+                    if (categoryList.isNotEmpty && selectedCategory == null) {
+                      return;
+                    }
                     final amount = parseCurrencyToDouble(amountController.text);
                     if (amount <= 0) {
                       return;
@@ -311,7 +374,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                         index: index,
                         purchaseDate: purchaseDate,
                         amount: amount,
-                        category: categoryController.text.trim(),
+                        category: selectedCategory ?? '',
                         reason: reasonController.text.trim(),
                       );
                     } else {
@@ -321,7 +384,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                             id: _nextEntryId(),
                             columnId: widget.column.id,
                             date: selectedDate,
-                            category: categoryController.text.trim(),
+                            category: selectedCategory ?? '',
                             reason: reasonController.text.trim(),
                             amount: amount,
                           ),
@@ -331,7 +394,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                           entry.id,
                           entry.copyWith(
                             date: selectedDate,
-                            category: categoryController.text.trim(),
+                            category: selectedCategory ?? '',
                             reason: reasonController.text.trim(),
                             amount: amount,
                             installmentCount: null,
@@ -447,6 +510,15 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
         duration: const Duration(milliseconds: 1600),
         behavior: SnackBarBehavior.floating,
         backgroundColor: Colors.white.withValues(alpha: 0.12),
+      ),
+    );
+  }
+
+  void _openCategories() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CategoriasScreen(store: widget.categoriesStore),
       ),
     );
   }

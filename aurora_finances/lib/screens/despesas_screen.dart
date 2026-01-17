@@ -2,17 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../data/despesas_store.dart';
+import '../data/categories_store.dart';
 import '../models/despesas_models.dart';
+import '../screens/categorias_screen.dart';
 import '../screens/despesa_coluna_screen.dart';
 import '../utils/currency_input_formatter.dart';
 import '../utils/month_key.dart';
 import '../widgets/aurora_badge.dart';
 import '../widgets/aurora_scaffold.dart';
+import '../widgets/app_settings_scope.dart';
 
 class DespesasScreen extends StatefulWidget {
   final DespesasStore store;
+  final CategoriesStore categoriesStore;
 
-  const DespesasScreen({super.key, required this.store});
+  const DespesasScreen({
+    super.key,
+    required this.store,
+    required this.categoriesStore,
+  });
 
   @override
   State<DespesasScreen> createState() => _DespesasScreenState();
@@ -32,6 +40,9 @@ class _DespesasScreenState extends State<DespesasScreen> {
     if (!widget.store.isLoaded) {
       widget.store.load();
     }
+    if (!widget.categoriesStore.isLoaded) {
+      widget.categoriesStore.load();
+    }
     _selectedMonth = _initialMonth();
     _currentIndex = _monthsBetween(_startDate, _selectedMonth);
     _monthController = PageController(initialPage: _currentIndex);
@@ -48,12 +59,20 @@ class _DespesasScreenState extends State<DespesasScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final monthFormatter = DateFormat('MMMM yyyy', 'pt_BR');
-    final moneyFormatter = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    final settings = AppSettingsScope.of(context);
+    final monthFormatter = settings.monthYearFormatter();
+    final moneyFormatter = settings.currencyFormatter();
 
     return AuroraScaffold(
       appBar: AppBar(
         title: const Text('Despesas'),
+        actions: [
+          IconButton(
+            onPressed: _openCategories,
+            icon: const Icon(Icons.category),
+            tooltip: 'Categorias',
+          ),
+        ],
       ),
       body: AnimatedBuilder(
         animation: widget.store,
@@ -126,7 +145,9 @@ class _DespesasScreenState extends State<DespesasScreen> {
                                       moneyFormatter,
                                     ),
                                     onChanged: (value) =>
-                                        _updateSimpleValue(_selectedMonth, column, value),
+                                        _updateSimpleValueCurrent(_selectedMonth, column, value),
+                                    onApply: (value) =>
+                                        _applyFixedValueFromMonth(_selectedMonth, column, value),
                                     badgeLabel: 'valor fixo',
                                   );
                                 }
@@ -211,10 +232,20 @@ class _DespesasScreenState extends State<DespesasScreen> {
       MaterialPageRoute(
         builder: (context) => DespesaColunaScreen(
           store: widget.store,
+          categoriesStore: widget.categoriesStore,
           group: group,
           column: column,
           initialMonth: _selectedMonth,
         ),
+      ),
+    );
+  }
+
+  void _openCategories() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CategoriasScreen(store: widget.categoriesStore),
       ),
     );
   }
@@ -235,7 +266,27 @@ class _DespesasScreenState extends State<DespesasScreen> {
     });
   }
 
-  void _updateSimpleValue(DateTime month, ExpenseColumn column, String value) {
+  void _applyFixedValueFromMonth(DateTime month, ExpenseColumn column, String value) {
+    final parsed = parseCurrencyToDouble(value);
+    final settings = AppSettingsScope.of(context);
+    final formatter = settings.currencyFormatter();
+    final end = DateTime(2030, 12, 1);
+    widget.store.setFixedValueFromMonth(month, end, column, parsed);
+
+    _simpleControllers.forEach((key, controller) {
+      final parts = key.split('|');
+      if (parts.length != 2 || parts[1] != column.id) {
+        return;
+      }
+      final parsedMonth = parseMonthKey(parts[0]);
+      if (parsedMonth == null || parsedMonth.isBefore(month)) {
+        return;
+      }
+      controller.text = formatter.format(parsed);
+    });
+  }
+
+  void _updateSimpleValueCurrent(DateTime month, ExpenseColumn column, String value) {
     final parsed = parseCurrencyToDouble(value);
     widget.store.setValueForColumn(month, column, parsed);
   }
@@ -867,17 +918,20 @@ class _ColumnValueTile extends StatelessWidget {
   final String title;
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
+  final ValueChanged<String> onApply;
   final String? badgeLabel;
 
   const _ColumnValueTile({
     required this.title,
     required this.controller,
     required this.onChanged,
+    required this.onApply,
     this.badgeLabel,
   });
 
   @override
   Widget build(BuildContext context) {
+    final settings = AppSettingsScope.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
       decoration: BoxDecoration(
@@ -899,20 +953,35 @@ class _ColumnValueTile extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          TextField(
-            controller: controller,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              CurrencyInputFormatter(locale: 'pt_BR', symbol: 'R\$'),
-            ],
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              isDense: true,
-              hintText: '0,00',
-              hintStyle: TextStyle(color: Colors.white54),
+          Focus(
+            onFocusChange: (hasFocus) {
+              if (!hasFocus) {
+                onApply(controller.text);
+              }
+            },
+            child: TextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                CurrencyInputFormatter(
+                  locale: settings.currencyLocale,
+                  symbol: settings.currencySymbol,
+                ),
+              ],
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                isDense: true,
+                hintText: '0,00',
+                hintStyle: TextStyle(color: Colors.white54),
+              ),
+              onChanged: (value) {
+                onChanged(value);
+                onApply(value);
+              },
+              onEditingComplete: () => onApply(controller.text),
+              onSubmitted: (_) => onApply(controller.text),
             ),
-            onChanged: onChanged,
           ),
           if (badgeLabel != null) ...[
             const SizedBox(height: 6),

@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-
 import '../data/menu_store.dart';
 import '../data/despesas_store.dart';
 import '../data/receitas_store.dart';
+import '../data/categories_store.dart';
+import '../data/settings_store.dart';
 import '../models/menu_models.dart';
 import '../screens/despesas_screen.dart';
 import '../screens/receitas_screen.dart';
+import '../widgets/app_settings_scope.dart';
 
 class ResumoFinanceiroWidget extends StatefulWidget {
   final MenuStore menuStore;
   final ReceitasStore receitasStore;
   final DespesasStore despesasStore;
+  final CategoriesStore categoriesStore;
   final double receitas;
   final double despesas;
   final double saldoMensal;
@@ -23,6 +25,7 @@ class ResumoFinanceiroWidget extends StatefulWidget {
     required this.menuStore,
     required this.receitasStore,
     required this.despesasStore,
+    required this.categoriesStore,
     required this.receitas,
     required this.despesas,
     required this.saldoMensal,
@@ -41,6 +44,7 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = AppSettingsScope.of(context);
     return AnimatedBuilder(
       animation: widget.menuStore,
       builder: (context, _) {
@@ -72,19 +76,91 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
               },
               body: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: widget.menuStore.sections.map((section) {
-                    return _MenuSection(
-                      title: section.title,
-                      items: section.items,
-                      onAdd: () => _showAddMenuDialog(section.type),
-                      onRemove: (id) => widget.menuStore.removeItem(section.type, id),
-                      resolveValue: _resolveValue,
-                      resolveColor: _resolveColor,
-                      onTap: _resolveTap,
-                    );
-                  }).toList(),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Indicadores',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.2,
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            'Arraste para ordenar',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ReorderableListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        buildDefaultDragHandles: false,
+                        itemCount: widget.menuStore.orderedItems.length + 1,
+                        onReorder: widget.menuStore.reorderOrderedItems,
+                        proxyDecorator: (child, index, animation) {
+                          return Material(
+                            color: Colors.transparent,
+                            child: FadeTransition(opacity: animation, child: child),
+                          );
+                        },
+                        itemBuilder: (context, index) {
+                          if (index < widget.menuStore.orderedItems.length) {
+                            final entry = widget.menuStore.orderedItems[index];
+                            return _MenuItemRow(
+                        key: ValueKey(entry.item.id),
+                        title: _resolveTitle(settings, entry.item),
+                        value: _resolveValue(entry.item),
+                        color: _resolveColor(entry.item),
+                              onTap: _resolveTap(entry.item),
+                              onRemove: () =>
+                                  widget.menuStore.removeItem(entry.type, entry.item.id),
+                              dragHandle: ReorderableDelayedDragStartListener(
+                                index: index,
+                                child: Tooltip(
+                                  message: 'Arrastar para reordenar',
+                                  child: Container(
+                                    height: 24,
+                                    width: 24,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.06),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.drag_indicator,
+                                      size: 14,
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          return _AddCard(
+                            key: const ValueKey('add-card'),
+                            onTap: _showAddMenuDialog,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -99,7 +175,7 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
       return item.customValue ?? '-';
     }
 
-    final format = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    final format = AppSettingsScope.of(context).currencyFormatter();
     switch (item.metric) {
       case MenuMetric.receitas:
         return format.format(widget.receitas);
@@ -123,22 +199,52 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
       return const Color(0xFF254A6A);
     }
 
+    final settings = AppSettingsScope.of(context);
     switch (item.metric) {
       case MenuMetric.receitas:
-        return const Color(0xFF1FAF86);
+        return settings.colorForMetric(
+          menuMetricKey(MenuMetric.receitas),
+          const Color(0xFF1FAF86),
+        );
       case MenuMetric.despesas:
-        return const Color(0xFF2A2D3C);
+        return settings.colorForMetric(
+          menuMetricKey(MenuMetric.despesas),
+          const Color(0xFF2A2D3C),
+        );
       case MenuMetric.saldoMensal:
-        return widget.saldoMensal >= 0 ? const Color(0xFF1C8EC9) : const Color(0xFFE19932);
+        return settings.colorForMetric(
+          menuMetricKey(MenuMetric.saldoMensal),
+          widget.saldoMensal >= 0 ? const Color(0xFF1C8EC9) : const Color(0xFFE19932),
+        );
       case MenuMetric.saldoAposReserva:
-        return widget.saldoAposReserva >= 0 ? const Color(0xFF1D9C7C) : const Color(0xFFE36A4F);
+        return settings.colorForMetric(
+          menuMetricKey(MenuMetric.saldoAposReserva),
+          widget.saldoAposReserva >= 0 ? const Color(0xFF1D9C7C) : const Color(0xFFE36A4F),
+        );
       case MenuMetric.saldoAtual:
-        return const Color(0xFF1C7C9C);
+        return settings.colorForMetric(
+          menuMetricKey(MenuMetric.saldoAtual),
+          const Color(0xFF1C7C9C),
+        );
       case MenuMetric.segurancaAno:
-        return const Color(0xFF3D5BA9);
+        return settings.colorForMetric(
+          menuMetricKey(MenuMetric.segurancaAno),
+          const Color(0xFF3D5BA9),
+        );
       case null:
         return const Color(0xFF254A6A);
     }
+  }
+
+  String _resolveTitle(AppSettingsStore settings, MenuItemConfig item) {
+    if (item.kind != MenuItemKind.metric || item.metric == null) {
+      return item.title;
+    }
+    final defaultTitle = menuMetricTitle(item.metric!);
+    if (item.title.trim() == defaultTitle) {
+      return settings.labelForMetric(menuMetricKey(item.metric!), defaultTitle);
+    }
+    return item.title;
   }
 
   VoidCallback? _resolveTap(MenuItemConfig item) {
@@ -156,12 +262,15 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
             ),
           );
         };
-      case MenuMetric.despesas:
+              case MenuMetric.despesas:
         return () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => DespesasScreen(store: widget.despesasStore),
+              builder: (context) => DespesasScreen(
+                store: widget.despesasStore,
+                categoriesStore: widget.categoriesStore,
+              ),
             ),
           );
         };
@@ -174,12 +283,13 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
     }
   }
 
-  void _showAddMenuDialog(MenuSectionType type) {
+  void _showAddMenuDialog() {
     final titleController = TextEditingController();
     final valueController = TextEditingController();
     MenuItemKind kind = MenuItemKind.metric;
-    MenuMetric selectedMetric =
-        type == MenuSectionType.receitas ? MenuMetric.receitas : MenuMetric.despesas;
+    MenuSectionType selectedType = MenuSectionType.receitas;
+    MenuMetric selectedMetric = MenuMetric.receitas;
+    final settings = AppSettingsScope.of(context);
 
     showDialog(
       context: context,
@@ -191,6 +301,32 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  DropdownButtonFormField<MenuSectionType>(
+                    initialValue: selectedType,
+                    decoration: const InputDecoration(labelText: 'Categoria'),
+                    items: const [
+                      DropdownMenuItem(
+                        value: MenuSectionType.receitas,
+                        child: Text('Receitas'),
+                      ),
+                      DropdownMenuItem(
+                        value: MenuSectionType.despesas,
+                        child: Text('Despesas'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() {
+                        selectedType = value;
+                        if (kind == MenuItemKind.metric) {
+                          selectedMetric = selectedType == MenuSectionType.receitas
+                              ? MenuMetric.receitas
+                              : MenuMetric.despesas;
+                        }
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
                   DropdownButtonFormField<MenuItemKind>(
                     initialValue: kind,
                     decoration: const InputDecoration(labelText: 'Tipo'),
@@ -211,14 +347,19 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
                   ),
                   const SizedBox(height: 8),
                   if (kind == MenuItemKind.metric)
-                    DropdownButtonFormField<MenuMetric>(
+                  DropdownButtonFormField<MenuMetric>(
                       initialValue: selectedMetric,
                       decoration: const InputDecoration(labelText: 'Indicador'),
                       items: MenuMetric.values
                           .map(
                             (metric) => DropdownMenuItem(
                               value: metric,
-                              child: Text(menuMetricTitle(metric)),
+                              child: Text(
+                                settings.labelForMetric(
+                                  menuMetricKey(metric),
+                                  menuMetricTitle(metric),
+                                ),
+                              ),
                             ),
                           )
                           .toList(),
@@ -249,10 +390,13 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
                   onPressed: () {
                     if (kind == MenuItemKind.metric) {
                       widget.menuStore.addMetricItem(
-                        type,
+                        selectedType,
                         selectedMetric,
                         title: titleController.text.trim().isEmpty
-                            ? menuMetricTitle(selectedMetric)
+                            ? settings.labelForMetric(
+                                menuMetricKey(selectedMetric),
+                                menuMetricTitle(selectedMetric),
+                              )
                             : titleController.text.trim(),
                       );
                     } else {
@@ -261,7 +405,7 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
                         return;
                       }
                       widget.menuStore.addCustomItem(
-                        type,
+                        selectedType,
                         title: titleController.text,
                         value: valueController.text,
                       );
@@ -279,120 +423,94 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
   }
 }
 
-class _MenuSection extends StatelessWidget {
+class _MenuItemRow extends StatelessWidget {
   final String title;
-  final List<MenuItemConfig> items;
-  final VoidCallback onAdd;
-  final void Function(String id) onRemove;
-  final String Function(MenuItemConfig item) resolveValue;
-  final Color Function(MenuItemConfig item) resolveColor;
-  final VoidCallback? Function(MenuItemConfig item) onTap;
+  final String value;
+  final Color color;
+  final VoidCallback? onTap;
+  final VoidCallback onRemove;
+  final Widget dragHandle;
 
-  const _MenuSection({
+  const _MenuItemRow({
+    super.key,
     required this.title,
-    required this.items,
-    required this.onAdd,
-    required this.onRemove,
-    required this.resolveValue,
-    required this.resolveColor,
+    required this.value,
+    required this.color,
     required this.onTap,
+    required this.onRemove,
+    required this.dragHandle,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        ),
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.2,
-                    color: Colors.white.withValues(alpha: 0.9),
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            color: Colors.white.withValues(alpha: 0.04),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 8,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              dragHandle,
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: onRemove,
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(
+                    Icons.close,
+                    size: 16,
+                    color: Colors.white.withValues(alpha: 0.7),
                   ),
                 ),
-                const Spacer(),
-                Container(
-                  height: 24,
-                  width: 24,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.06),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.drag_indicator, size: 14, color: Colors.white70),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final width = constraints.maxWidth;
-                final crossAxisCount = width >= 900
-                    ? 4
-                    : width >= 640
-                        ? 3
-                        : 2;
-                final childAspectRatio = width >= 640 ? 1.55 : 1.35;
-
-                return GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: items.length + 1,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    childAspectRatio: childAspectRatio,
-                  ),
-                  itemBuilder: (context, index) {
-                    if (index < items.length) {
-                      final item = items[index];
-                      return Stack(
-                        children: [
-                          Positioned.fill(
-                            child: FinanceCard(
-                              title: item.title,
-                              value: resolveValue(item),
-                              color: resolveColor(item),
-                              onTap: onTap(item),
-                            ),
-                          ),
-                          Positioned(
-                            right: 6,
-                            top: 6,
-                            child: InkWell(
-                              onTap: () => onRemove(item.id),
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.4),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.close, size: 14, color: Colors.white),
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    }
-                    return _AddCard(onTap: onAdd);
-                  },
-                );
-              },
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -402,75 +520,31 @@ class _MenuSection extends StatelessWidget {
 class _AddCard extends StatelessWidget {
   final VoidCallback onTap;
 
-  const _AddCard({required this.onTap});
+  const _AddCard({super.key, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(14),
       child: Ink(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
-          color: Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+          color: Colors.white.withValues(alpha: 0.06),
         ),
-        child: const Center(
-          child: Icon(Icons.add_circle, size: 36, color: Colors.white),
-        ),
-      ),
-    );
-  }
-}
-
-class FinanceCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final Color color;
-  final VoidCallback? onTap;
-
-  const FinanceCard({
-    required this.title,
-    required this.value,
-    required this.color,
-    this.onTap,
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Ink(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              color.withValues(alpha: 0.9),
-              color.withValues(alpha: 0.6),
-            ],
-          ),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
+            const Icon(Icons.add_circle, size: 22, color: Colors.white),
+            const SizedBox(width: 10),
             Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
-            ),
-            const Spacer(),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
+              'Adicionar item',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.white.withValues(alpha: 0.9),
+              ),
             ),
           ],
         ),

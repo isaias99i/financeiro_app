@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-
 import '../models/receitas_models.dart';
 import '../utils/currency_input_formatter.dart';
 import '../widgets/aurora_scaffold.dart';
+import '../widgets/app_settings_scope.dart';
 
 class ExtrasScreen extends StatefulWidget {
   final List<ExtraEntry> initialEntries;
@@ -32,10 +31,11 @@ class _ExtrasScreenState extends State<ExtrasScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final formatter = DateFormat('dd/MM/yyyy');
+    final settings = AppSettingsScope.of(context);
+    final formatter = settings.dateFormatter();
     final title = widget.filterMonth == null
         ? 'Extras'
-        : 'Extras ${DateFormat('MM/yyyy').format(widget.filterMonth!)}';
+        : 'Extras ${settings.numericMonthYearFormatter().format(widget.filterMonth!)}';
     final entries = _visibleEntries();
 
     return AuroraScaffold(
@@ -70,7 +70,7 @@ class _ExtrasScreenState extends State<ExtrasScreen> {
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
               ),
               trailing: Text(
-                NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(entry.amount),
+                settings.currencyFormatter().format(entry.amount),
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
               ),
               leading: const Icon(Icons.star, color: Colors.white),
@@ -87,6 +87,7 @@ class _ExtrasScreenState extends State<ExtrasScreen> {
   }
 
   Future<void> _showAddDialog() async {
+    final settings = AppSettingsScope.of(context);
     final noteController = TextEditingController();
     final amountController = TextEditingController();
     DateTime? selectedDate =
@@ -112,7 +113,10 @@ class _ExtrasScreenState extends State<ExtrasScreen> {
                 controller: amountController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
-                  CurrencyInputFormatter(locale: 'pt_BR', symbol: 'R\$'),
+                  CurrencyInputFormatter(
+                    locale: settings.currencyLocale,
+                    symbol: settings.currencySymbol,
+                  ),
                 ],
                 decoration: const InputDecoration(labelText: 'Valor'),
               ),

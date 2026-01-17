@@ -1,46 +1,105 @@
 import 'package:flutter/material.dart';
 
+import '../data/settings_store.dart';
+import 'app_settings_scope.dart';
+
 class AuroraBackground extends StatelessWidget {
   const AuroraBackground({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final settings = AppSettingsScope.of(context);
+    final palette = _paletteFor(settings);
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF07111D),
-            Color(0xFF0A2B3A),
-            Color(0xFF0F3C4F),
-          ],
-          stops: [0.0, 0.55, 1.0],
+          colors: palette.background,
+          stops: const [0.0, 0.55, 1.0],
         ),
       ),
       child: Stack(
-        children: const [
+        children: [
           _GlowBlob(
-            color: Color(0xFF1FE6A8),
+            color: palette.glowA,
             size: 320,
-            offset: Offset(-120, -80),
-            opacity: 0.4,
+            offset: const Offset(-120, -80),
+            opacity: palette.glowOpacity,
           ),
           _GlowBlob(
-            color: Color(0xFF2AD3FF),
+            color: palette.glowB,
             size: 260,
-            offset: Offset(220, 80),
-            opacity: 0.35,
+            offset: const Offset(220, 80),
+            opacity: palette.glowOpacity - 0.05,
           ),
           _GlowBlob(
-            color: Color(0xFFB2FF7D),
+            color: palette.glowC,
             size: 300,
-            offset: Offset(60, 420),
-            opacity: 0.25,
+            offset: const Offset(60, 420),
+            opacity: palette.glowOpacity - 0.15,
           ),
         ],
       ),
     );
+  }
+}
+
+class _AuroraPalette {
+  final List<Color> background;
+  final Color glowA;
+  final Color glowB;
+  final Color glowC;
+  final double glowOpacity;
+
+  const _AuroraPalette({
+    required this.background,
+    required this.glowA,
+    required this.glowB,
+    required this.glowC,
+    required this.glowOpacity,
+  });
+}
+
+_AuroraPalette _paletteFor(AppSettingsStore settings) {
+  final contrastBoost = settings.contrastLevel == ContrastLevel.high ? 0.08 : 0.0;
+  switch (settings.themeStyle) {
+    case AppThemeStyle.aurora:
+      return _AuroraPalette(
+        background: const [
+          Color(0xFF07111D),
+          Color(0xFF0A2B3A),
+          Color(0xFF0F3C4F),
+        ],
+        glowA: const Color(0xFF1FE6A8),
+        glowB: const Color(0xFF2AD3FF),
+        glowC: const Color(0xFFB2FF7D),
+        glowOpacity: 0.4 + contrastBoost,
+      );
+    case AppThemeStyle.dusk:
+      return _AuroraPalette(
+        background: const [
+          Color(0xFF0C0F1B),
+          Color(0xFF1B1C33),
+          Color(0xFF23284A),
+        ],
+        glowA: const Color(0xFF8E7BFF),
+        glowB: const Color(0xFF4BC3FF),
+        glowC: const Color(0xFFFFA657),
+        glowOpacity: 0.35 + contrastBoost,
+      );
+    case AppThemeStyle.glacier:
+      return _AuroraPalette(
+        background: const [
+          Color(0xFF06141A),
+          Color(0xFF0B2C36),
+          Color(0xFF123E4B),
+        ],
+        glowA: const Color(0xFF7DE6FF),
+        glowB: const Color(0xFF4FF3C7),
+        glowC: const Color(0xFF9BC3FF),
+        glowOpacity: 0.38 + contrastBoost,
+      );
   }
 }
 

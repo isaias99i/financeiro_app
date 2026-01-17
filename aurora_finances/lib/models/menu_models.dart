@@ -28,6 +28,10 @@ String menuMetricTitle(MenuMetric metric) {
   }
 }
 
+String menuMetricKey(MenuMetric metric) {
+  return 'menuMetric.${metric.name}';
+}
+
 class MenuItemConfig {
   final String id;
   final MenuItemKind kind;
@@ -60,4 +64,11 @@ class MenuSectionConfig {
     required this.title,
     required this.items,
   });
+}
+
+class MenuItemEntry {
+  final MenuSectionType type;
+  final MenuItemConfig item;
+
+  const MenuItemEntry({required this.type, required this.item});
 }

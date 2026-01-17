@@ -6,12 +6,18 @@
 // tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:aurora_finances/main.dart';
+import 'package:aurora_finances/data/settings_store.dart';
 
 void main() {
   testWidgets('App loads dashboard', (WidgetTester tester) async {
-    await tester.pumpWidget(const FinanceApp());
+    SharedPreferences.setMockInitialValues({});
+    final settingsStore = AppSettingsStore();
+    await settingsStore.load();
+
+    await tester.pumpWidget(FinanceApp(settingsStore: settingsStore));
 
     expect(find.text('Dashboard'), findsOneWidget);
   });
