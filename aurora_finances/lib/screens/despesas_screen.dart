@@ -11,9 +11,10 @@ import '../utils/month_key.dart';
 import '../widgets/aurora_badge.dart';
 import '../widgets/aurora_scaffold.dart';
 import '../widgets/app_settings_scope.dart';
+import '../theme/app_layout.dart';
 import '../theme/app_tokens.dart';
 
-// Tela de despesas com grupos e colunas.
+// Tela de despesas com categorias e itens de gasto.
 class DespesasScreen extends StatefulWidget {
   final DespesasStore store;
   final CategoriesStore categoriesStore;
@@ -64,7 +65,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
   }
 
   @override
-  // Monta a UI com grupos, colunas e totalizadores.
+  // Monta a UI com categorias, itens de gasto e totalizadores.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
     final monthFormatter = settings.monthYearFormatter();
@@ -96,7 +97,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
           );
 
           return Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(AppLayout.spaceLg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -111,73 +112,106 @@ class _DespesasScreenState extends State<DespesasScreen> {
                     });
                   },
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppLayout.spaceMd),
                 _SummaryCard(
                   totalLabel: moneyFormatter.format(totalMes),
                   groupCount: groupCount,
                   columnCount: columnCount,
                 ),
-                const SizedBox(height: 12),
-                _ActionBar(
-                  onAddGroup: _addGroup,
-                  onAddColumn: widget.store.groups.isEmpty ? null : _addColumn,
+                _ActionIcons(
+                  onAddCategory: _addGroup,
+                  onAddSubcategory: _addColumn,
+                  canAddSubcategory: widget.store.groups.isNotEmpty,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppLayout.spaceSm),
                 Expanded(
                   child: widget.store.groups.isEmpty
                       ? _EmptyState(onAddGroup: _addGroup)
-                      : ListView.separated(
+                      : ReorderableListView.builder(
+                          padding: EdgeInsets.zero,
+                          primary: false,
+                          buildDefaultDragHandles: false,
                           itemCount: widget.store.groups.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 10),
+                          onReorder: widget.store.reorderGroups,
                           itemBuilder: (context, index) {
                             final group = widget.store.groups[index];
-                            final groupTotal = widget.store.totalForGroup(_selectedMonth, group);
+                            final groupTotal = widget.store.totalForGroup(
+                              _selectedMonth,
+                              group,
+                            );
 
-                            return _GroupCard(
-                              group: group,
-                              totalLabel: moneyFormatter.format(groupTotal),
-                              onEditGroup: () => _editGroup(group),
-                              onRemoveGroup: () => _removeGroup(group),
-                              onAddColumn: () => _addColumnForGroup(group),
-                              onEditColumn: (column) => _editColumn(group, column),
-                              onRemoveColumn: (column) => _removeColumn(group, column),
-                              columnCount: group.columns.length,
-                              buildCell: (column) {
-                                if (!column.requiresEntries) {
-                                  return _ColumnValueTile(
-                                    title: column.title,
-                                    controller: _simpleControllerFor(
-                                      _selectedMonth,
-                                      column,
-                                      moneyFormatter,
+                            return Padding(
+                              key: ValueKey(group.id),
+                              padding: const EdgeInsets.only(
+                                bottom: AppLayout.spaceMd,
+                              ),
+                              child: _GroupCard(
+                                group: group,
+                                totalLabel: moneyFormatter.format(groupTotal),
+                                onEditGroup: () => _editGroup(group),
+                                onRemoveGroup: () => _removeGroup(group),
+                                onAddColumn: () => _addColumnForGroup(group),
+                                onEditColumn: (column) =>
+                                    _editColumn(group, column),
+                                onRemoveColumn: (column) =>
+                                    _removeColumn(group, column),
+                                onReorderColumns: (oldIndex, newIndex) =>
+                                    widget.store.reorderColumns(
+                                      group,
+                                      oldIndex,
+                                      newIndex,
                                     ),
-                                    onChanged: (value) =>
-                                        _updateSimpleValueCurrent(_selectedMonth, column, value),
-                                    onApply: (value) =>
-                                        _applyFixedValueFromMonth(_selectedMonth, column, value),
-                                    badgeLabel: 'valor fixo',
-                                  );
-                                }
+                                dragHandle: ReorderableDragStartListener(
+                                  index: index,
+                                  child: const Icon(Icons.drag_indicator),
+                                ),
+                                buildCell: (column, columnIndex) {
+                                  if (!column.requiresEntries) {
+                                    return _ColumnValueTile(
+                                      title: column.title,
+                                      controller: _simpleControllerFor(
+                                        _selectedMonth,
+                                        column,
+                                        moneyFormatter,
+                                      ),
+                                      onChanged: (value) =>
+                                          _updateSimpleValueCurrent(
+                                            _selectedMonth,
+                                            column,
+                                            value,
+                                          ),
+                                      onApply: (value) =>
+                                          _applyFixedValueFromMonth(
+                                            _selectedMonth,
+                                            column,
+                                            value,
+                                          ),
+                                    );
+                                  }
 
-                                final total = widget.store.totalForColumn(_selectedMonth, column);
-                                final count =
-                                    widget.store.countForColumn(_selectedMonth, column);
-                                return _ColumnSummaryTile(
-                                  title: column.title,
-                                  totalLabel: moneyFormatter.format(total),
-                                  countLabel: '$count itens',
-                                  onTap: () => _openColumnEntries(group, column),
-                                  badgeLabel: 'detalhado',
-                                );
-                              },
+                                  final total = widget.store.totalForColumn(
+                                    _selectedMonth,
+                                    column,
+                                  );
+                                  final count = widget.store.countForColumn(
+                                    _selectedMonth,
+                                    column,
+                                  );
+                                  return _ColumnSummaryTile(
+                                    title: column.title,
+                                    totalLabel: moneyFormatter.format(total),
+                                    countLabel: '$count itens',
+                                    onTap: () =>
+                                        _openColumnEntries(group, column),
+                                  );
+                                },
+                              ),
                             );
                           },
                         ),
                 ),
-                const SizedBox(height: 12),
-                _TotalFooter(
-                  label: moneyFormatter.format(totalMes),
-                ),
+                const SizedBox(height: AppLayout.spaceMd),
+                _TotalFooter(label: moneyFormatter.format(totalMes)),
               ],
             ),
           );
@@ -241,7 +275,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
     _simpleControllers.clear();
   }
 
-  // Abre a tela de lancamentos da coluna.
+  // Abre a tela de lancamentos da subcategoria.
   void _openColumnEntries(ExpenseGroup group, ExpenseColumn column) {
     Navigator.push(
       context,
@@ -267,7 +301,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
     );
   }
 
-  // Retorna controller para coluna fixa por mes.
+  // Retorna controller para subcategoria fixa por mes.
   TextEditingController _simpleControllerFor(
     DateTime month,
     ExpenseColumn column,
@@ -285,7 +319,11 @@ class _DespesasScreenState extends State<DespesasScreen> {
   }
 
   // Aplica valor fixo a partir de um mes.
-  void _applyFixedValueFromMonth(DateTime month, ExpenseColumn column, String value) {
+  void _applyFixedValueFromMonth(
+    DateTime month,
+    ExpenseColumn column,
+    String value,
+  ) {
     final parsed = parseCurrencyToDouble(value);
     final settings = AppSettingsScope.of(context);
     final formatter = settings.currencyFormatter();
@@ -305,40 +343,44 @@ class _DespesasScreenState extends State<DespesasScreen> {
     });
   }
 
-  // Atualiza valor simples da coluna no mes.
-  void _updateSimpleValueCurrent(DateTime month, ExpenseColumn column, String value) {
+  // Atualiza valor simples da subcategoria no mes.
+  void _updateSimpleValueCurrent(
+    DateTime month,
+    ExpenseColumn column,
+    String value,
+  ) {
     final parsed = parseCurrencyToDouble(value);
     widget.store.setValueForColumn(month, column, parsed);
   }
 
-  // Cria um novo grupo de despesas.
+  // Cria uma nova categoria de despesas.
   Future<void> _addGroup() async {
     final title = await _promptForText(
-      title: 'Novo grupo',
-      label: 'Nome do grupo',
+      title: 'Nova categoria',
+      label: 'Nome da categoria',
     );
     if (title == null || title.trim().isEmpty) return;
     widget.store.addGroup(title.trim());
-    _showSnack('Grupo criado');
+    _showSnack('Categoria criada');
   }
 
-  // Edita o nome do grupo.
+  // Edita o nome da categoria.
   Future<void> _editGroup(ExpenseGroup group) async {
     final title = await _promptForText(
-      title: 'Editar grupo',
-      label: 'Nome do grupo',
+      title: 'Editar categoria',
+      label: 'Nome da categoria',
       initialValue: group.title,
     );
     if (title == null || title.trim().isEmpty) return;
     widget.store.updateGroup(group, title.trim());
   }
 
-  // Remove um grupo e suas colunas.
+  // Remove uma categoria e seus itens de gasto.
   void _removeGroup(ExpenseGroup group) {
     widget.store.removeGroup(group);
   }
 
-  // Cria uma nova coluna em um grupo.
+  // Cria uma nova subcategoria em uma categoria.
   Future<void> _addColumn() async {
     final result = await _promptForColumn();
     if (result == null) return;
@@ -347,10 +389,10 @@ class _DespesasScreenState extends State<DespesasScreen> {
       result.title,
       requiresEntries: result.requiresEntries,
     );
-    _showSnack('Coluna adicionada');
+    _showSnack('Subcategoria adicionada');
   }
 
-  // Cria uma nova coluna para um grupo especifico.
+  // Cria uma nova subcategoria para uma categoria especifica.
   Future<void> _addColumnForGroup(ExpenseGroup group) async {
     final result = await _promptForColumn(group: group);
     if (result == null) return;
@@ -359,21 +401,21 @@ class _DespesasScreenState extends State<DespesasScreen> {
       result.title,
       requiresEntries: result.requiresEntries,
     );
-    _showSnack('Coluna adicionada');
+    _showSnack('Subcategoria adicionada');
   }
 
-  // Edita o titulo da coluna.
+  // Edita o titulo da subcategoria.
   Future<void> _editColumn(ExpenseGroup group, ExpenseColumn column) async {
     final title = await _promptForText(
-      title: 'Editar coluna',
-      label: 'Nome da coluna',
+      title: 'Editar subcategoria',
+      label: 'Nome da subcategoria',
       initialValue: column.title,
     );
     if (title == null || title.trim().isEmpty) return;
     widget.store.updateColumn(group, column, title.trim());
   }
 
-  // Remove uma coluna de um grupo.
+  // Remove uma subcategoria de uma categoria.
   void _removeColumn(ExpenseGroup group, ExpenseColumn column) {
     widget.store.removeColumn(group, column);
   }
@@ -413,26 +455,30 @@ class _DespesasScreenState extends State<DespesasScreen> {
     );
   }
 
-  // Exibe dialogo para criar coluna.
+  // Exibe dialogo para criar subcategoria.
   Future<_ColumnInput?> _promptForColumn({ExpenseGroup? group}) async {
     final controller = TextEditingController();
     ExpenseGroup selectedGroup = group ?? widget.store.groups.first;
-    bool requiresEntries = true;
+    bool requiresEntries = false;
 
     return showDialog<_ColumnInput>(
       context: context,
       builder: (context) {
         return StatefulBuilder(
-          builder: (context, setState) {
+          builder: (context, setState) {            
             return AlertDialog(
-              title: const Text('Nova coluna'),
+              title: const Text('Nova subcategoria'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (group == null)
-                    DropdownButtonFormField<ExpenseGroup>(
+                  DropdownButtonFormField<ExpenseGroup>(
                       initialValue: selectedGroup,
-                      decoration: const InputDecoration(labelText: 'Grupo'),
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.folder_open),
+                        contentPadding: EdgeInsets.symmetric(
+                          vertical: AppLayout.spaceSm,
+                        ),
+                      ),
                       items: widget.store.groups
                           .map(
                             (group) => DropdownMenuItem(
@@ -446,19 +492,27 @@ class _DespesasScreenState extends State<DespesasScreen> {
                         setState(() => selectedGroup = value);
                       },
                     ),
+                  const SizedBox(height: AppLayout.spaceSm),
                   TextField(
                     controller: controller,
                     keyboardType: TextInputType.text,
                     textCapitalization: TextCapitalization.words,
                     enableSuggestions: true,
                     autocorrect: true,
-                    decoration: const InputDecoration(labelText: 'Nome da coluna'),
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.subdirectory_arrow_right),
+                      contentPadding: EdgeInsets.symmetric(
+                        vertical: AppLayout.spaceSm,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppLayout.spaceSm),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Registrar lançamentos detalhados'),
-                    subtitle: const Text('Usar data, categoria, motivo e valor'),
+                    subtitle: const Text(
+                      'Usar data, categoria, motivo e valor',
+                    ),
                     value: requiresEntries,
                     onChanged: (value) {
                       setState(() => requiresEntries = value);
@@ -508,13 +562,9 @@ class _DespesasScreenState extends State<DespesasScreen> {
   }
 }
 
-// Modelo interno para criar colunas.
+// Modelo interno para criar itens de gasto.
 class _ColumnInput {
-  _ColumnInput(
-    this.group,
-    this.title, {
-    required this.requiresEntries,
-  });
+  _ColumnInput(this.group, this.title, {required this.requiresEntries});
 
   final ExpenseGroup group;
   final String title;
@@ -542,20 +592,27 @@ class _MonthSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = AppThemeTokens.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppLayout.spaceMd,
+        vertical: AppLayout.spaceMd,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: tokens.heroGradient,
         ),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppLayout.radiusLgTight),
         border: Border.all(color: tokens.border),
       ),
       child: Row(
         children: [
-          Icon(Icons.calendar_today, size: 16, color: tokens.textSecondary),
-          const SizedBox(width: 8),
+          Icon(
+            Icons.calendar_today,
+            size: AppLayout.iconSm,
+            color: tokens.textSecondary,
+          ),
+          const SizedBox(width: AppLayout.spaceSm),
           Expanded(
             child: SizedBox(
               height: 28,
@@ -596,7 +653,7 @@ class _MonthSelector extends StatelessWidget {
   }
 }
 
-// Estado vazio quando nao ha grupos.
+// Estado vazio quando nao ha categorias.
 class _EmptyState extends StatelessWidget {
   final VoidCallback onAddGroup;
 
@@ -608,27 +665,27 @@ class _EmptyState extends StatelessWidget {
     final tokens = AppThemeTokens.of(context);
     return Center(
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppLayout.spaceLg),
         decoration: BoxDecoration(
           color: tokens.surfaceAlt,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppLayout.radiusLg),
           border: Border.all(color: tokens.border),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.folder_open, color: tokens.textSecondary, size: 32),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppLayout.spaceSm),
             Text(
-              'Nenhum grupo criado. Crie um grupo para começar.',
+              'Nenhuma categoria criada. Crie uma categoria para começar.',
               style: TextStyle(color: tokens.textPrimary),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppLayout.spaceSm),
             TextButton.icon(
               onPressed: onAddGroup,
               icon: const Icon(Icons.add),
-              label: const Text('Criar grupo'),
+              label: const Text('Criar categoria'),
             ),
           ],
         ),
@@ -654,77 +711,103 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = AppThemeTokens.of(context);
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(AppLayout.spaceLgTight),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: tokens.panelGradient,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppLayout.radiusLg),
         border: Border.all(color: tokens.border),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.payments, color: tokens.textSecondary),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Total do mes',
-                  style: TextStyle(color: tokens.textMuted, fontSize: 12),
+          Row(
+            children: [
+              Icon(Icons.payments, color: tokens.textSecondary),
+              const SizedBox(width: AppLayout.spaceMd),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Total do mes',
+                      style: TextStyle(color: tokens.textMuted, fontSize: 12),
+                    ),
+                    const SizedBox(height: AppLayout.spaceXs),
+                    Text(
+                      totalLabel,
+                      style: TextStyle(
+                        color: tokens.textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  totalLabel,
-                  style: TextStyle(
-                    color: tokens.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          AuroraBadge(label: '$groupCount grupos'),
-          const SizedBox(width: 6),
-          AuroraBadge(label: '$columnCount colunas'),
+          const SizedBox(height: AppLayout.spaceSm),
+          Wrap(
+            spacing: AppLayout.spaceSm,
+            runSpacing: AppLayout.spaceXs,
+            children: [
+              AuroraBadge(label: '$groupCount categorias'),
+              AuroraBadge(label: '$columnCount itens'),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
-// Barra de acoes para criar grupos/colunas.
-class _ActionBar extends StatelessWidget {
-  final VoidCallback onAddGroup;
-  final VoidCallback? onAddColumn;
+// Acoes disponiveis no card da categoria.
+enum _GroupAction { addColumn, editGroup, removeGroup }
 
-  const _ActionBar({
-    required this.onAddGroup,
-    required this.onAddColumn,
+// Acoes de adicionar categoria/subcategoria em icones soltos.
+class _ActionIcons extends StatelessWidget {
+  final VoidCallback onAddCategory;
+  final VoidCallback onAddSubcategory;
+  final bool canAddSubcategory;
+
+  const _ActionIcons({
+    required this.onAddCategory,
+    required this.onAddSubcategory,
+    required this.canAddSubcategory,
   });
 
   @override
-  // Monta os botoes de acao.
+  // Monta os icones de acao sem borda.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
       children: [
-        Expanded(
-          child: FilledButton.icon(
-            onPressed: onAddGroup,
-            icon: const Icon(Icons.add),
-            label: const Text('Novo grupo'),
+        Tooltip(
+          message: 'Nova categoria',
+          child: IconButton(
+            onPressed: onAddCategory,
+            icon: const Icon(Icons.folder_open),
+            color: tokens.textPrimary,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+            visualDensity: VisualDensity.compact,
           ),
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: onAddColumn,
-            icon: const Icon(Icons.view_column),
-            label: const Text('Nova coluna'),
+        const SizedBox(width: AppLayout.spaceSm),
+        Tooltip(
+          message: 'Nova subcategoria',
+          child: IconButton(
+            onPressed: canAddSubcategory ? onAddSubcategory : null,
+            icon: const Icon(Icons.add_circle_outline),
+            color: tokens.textPrimary,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+            visualDensity: VisualDensity.compact,
           ),
         ),
       ],
@@ -732,7 +815,7 @@ class _ActionBar extends StatelessWidget {
   }
 }
 
-// Card de grupo com colunas e acoes.
+// Card de categoria com itens de gasto e acoes.
 class _GroupCard extends StatelessWidget {
   final ExpenseGroup group;
   final String totalLabel;
@@ -741,8 +824,9 @@ class _GroupCard extends StatelessWidget {
   final VoidCallback onAddColumn;
   final void Function(ExpenseColumn column) onEditColumn;
   final void Function(ExpenseColumn column) onRemoveColumn;
-  final int columnCount;
-  final Widget Function(ExpenseColumn column) buildCell;
+  final void Function(int oldIndex, int newIndex) onReorderColumns;
+  final Widget dragHandle;
+  final Widget Function(ExpenseColumn column, int index) buildCell;
 
   const _GroupCard({
     required this.group,
@@ -752,80 +836,173 @@ class _GroupCard extends StatelessWidget {
     required this.onAddColumn,
     required this.onEditColumn,
     required this.onRemoveColumn,
-    required this.columnCount,
+    required this.onReorderColumns,
+    required this.dragHandle,
     required this.buildCell,
   });
 
   @override
-  // Monta o card do grupo.
+  // Monta o card da categoria.
   Widget build(BuildContext context) {
     final tokens = AppThemeTokens.of(context);
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(
+        AppLayout.spaceMd,
+        AppLayout.spaceXs,
+        AppLayout.spaceMd,
+        AppLayout.spaceMd,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            tokens.surfaceAlt,
-            tokens.surface,
-          ],
+          colors: [tokens.surfaceAlt, tokens.surface],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppLayout.radiusLg),
         border: Border.all(color: tokens.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  group.title,
-                  style: TextStyle(
-                    color: tokens.textPrimary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isCompact = constraints.maxWidth < 520;
+              if (isCompact) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        dragHandle,
+                        const SizedBox(width: AppLayout.spaceSm),
+                        Expanded(
+                          child: Text(
+                            group.title,
+                            style: TextStyle(
+                              color: tokens.textPrimary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppLayout.spaceSm),
+                        Text(
+                          totalLabel,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: tokens.textPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        PopupMenuButton<_GroupAction>(
+                          onSelected: (action) {
+                            switch (action) {
+                              case _GroupAction.addColumn:
+                                onAddColumn();
+                              case _GroupAction.editGroup:
+                                onEditGroup();
+                              case _GroupAction.removeGroup:
+                                onRemoveGroup();
+                            }
+                          },
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints.tightFor(
+                            width: 32,
+                            height: 32,
+                          ),
+                          iconSize: 20,
+                          icon: Icon(
+                            Icons.more_vert,
+                            color: tokens.textSecondary,
+                          ),
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: _GroupAction.addColumn,
+                              child: Text('Adicionar subcategoria'),
+                            ),
+                            PopupMenuItem(
+                              value: _GroupAction.editGroup,
+                              child: Text('Editar categoria'),
+                            ),
+                            PopupMenuItem(
+                              value: _GroupAction.removeGroup,
+                              child: Text('Remover categoria'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  dragHandle,
+                  const SizedBox(width: AppLayout.spaceSm),
+                  Expanded(
+                    child: Text(
+                      group.title,
+                      style: TextStyle(
+                        color: tokens.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              Text(
-                '$columnCount colunas',
-                style: TextStyle(color: tokens.textMuted),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                totalLabel,
-                style: TextStyle(
-                  color: tokens.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: onAddColumn,
-                icon: const Icon(Icons.add),
-                tooltip: 'Adicionar coluna',
-                color: tokens.textSecondary,
-              ),
-              IconButton(
-                onPressed: onEditGroup,
-                icon: const Icon(Icons.edit),
-                tooltip: 'Editar grupo',
-                color: tokens.textSecondary,
-              ),
-              IconButton(
-                onPressed: onRemoveGroup,
-                icon: const Icon(Icons.delete_outline),
-                tooltip: 'Remover grupo',
-                color: tokens.textSecondary,
-              ),
-            ],
+                  Text(
+                    totalLabel,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: tokens.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: AppLayout.spaceSm),
+                  IconButton(
+                    onPressed: onAddColumn,
+                    icon: const Icon(Icons.add),
+                    tooltip: 'Adicionar subcategoria',
+                    color: tokens.textSecondary,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 32,
+                      height: 32,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  IconButton(
+                    onPressed: onEditGroup,
+                    icon: const Icon(Icons.edit),
+                    tooltip: 'Editar categoria',
+                    color: tokens.textSecondary,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 32,
+                      height: 32,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  IconButton(
+                    onPressed: onRemoveGroup,
+                    icon: const Icon(Icons.delete_outline),
+                    tooltip: 'Remover categoria',
+                    color: tokens.textSecondary,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 32,
+                      height: 32,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              );
+            },
           ),
-          const SizedBox(height: 8),
           if (group.columns.isEmpty)
             Text(
-              'Sem colunas. Clique em adicionar para incluir.',
+              'Sem itens de gasto. Clique em adicionar para incluir.',
               style: TextStyle(color: tokens.textSecondary),
             )
           else
@@ -835,24 +1012,77 @@ class _GroupCard extends StatelessWidget {
                 final crossAxisCount = width >= 900
                     ? 3
                     : width >= 600
-                        ? 2
-                        : 1;
+                    ? 2
+                    : 1;
+
+                if (crossAxisCount == 1) {
+                  return ReorderableListView.builder(
+                    // Reordena subcategorias no layout de uma coluna.
+                    padding: EdgeInsets.zero,
+                    primary: false,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    buildDefaultDragHandles: false,
+                    itemCount: group.columns.length,
+                    onReorder: onReorderColumns,
+                    itemBuilder: (context, index) {
+                      final column = group.columns[index];
+                      return Padding(
+                        key: ValueKey(column.id),
+                        padding: const EdgeInsets.only(
+                          bottom: AppLayout.spaceXs,
+                        ),
+                        child: Stack(
+                          children: [
+                            buildCell(column, index),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: Row(
+                                children: [
+                                  ReorderableDragStartListener(
+                                    index: index,
+                                    child: const Icon(
+                                      Icons.drag_indicator,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  _TinyIconButton(
+                                    icon: Icons.edit,
+                                    onTap: () => onEditColumn(column),
+                                  ),
+                                  _TinyIconButton(
+                                    icon: Icons.close,
+                                    onTap: () => onRemoveColumn(column),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                }
 
                 return GridView.builder(
+                  // Remove padding interno para evitar vao entre titulo e itens.
+                  padding: EdgeInsets.zero,
+                  primary: false,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: group.columns.length,
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: crossAxisCount,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
+                    crossAxisSpacing: AppLayout.spaceXs,
+                    mainAxisSpacing: AppLayout.spaceXs,
                     childAspectRatio: 3.2,
                   ),
                   itemBuilder: (context, index) {
                     final column = group.columns[index];
                     return Stack(
                       children: [
-                        buildCell(column),
+                        buildCell(column, index),
                         Positioned(
                           top: 4,
                           right: 4,
@@ -881,50 +1111,61 @@ class _GroupCard extends StatelessWidget {
   }
 }
 
-// Tile com resumo de coluna detalhada.
+// Tile com resumo de item detalhado.
 class _ColumnSummaryTile extends StatelessWidget {
   final String title;
   final String totalLabel;
   final String countLabel;
   final VoidCallback onTap;
-  final String? badgeLabel;
 
   const _ColumnSummaryTile({
     required this.title,
     required this.totalLabel,
     required this.countLabel,
     required this.onTap,
-    this.badgeLabel,
   });
 
   @override
-  // Monta o tile de resumo da coluna.
+  // Monta o tile de resumo do item.
   Widget build(BuildContext context) {
     final tokens = AppThemeTokens.of(context);
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppLayout.radiusMd),
       child: Ink(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        padding: const EdgeInsets.fromLTRB(
+          AppLayout.spaceMd,
+          AppLayout.spaceMd,
+          AppLayout.spaceMd,
+          AppLayout.spaceMd,
+        ),
         decoration: BoxDecoration(
           color: tokens.surfaceAlt,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppLayout.radiusMd),
           border: Border.all(color: tokens.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: tokens.textSecondary,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
+            Row(
+              children: [
+                Icon(Icons.list_alt, size: 14, color: tokens.textMuted),
+                const SizedBox(width: AppLayout.spaceSm),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: tokens.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const Spacer(),
+            const SizedBox(height: AppLayout.spaceSm),
             Text(
               totalLabel,
               style: TextStyle(
@@ -933,21 +1174,13 @@ class _ColumnSummaryTile extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppLayout.spaceXs),
             Row(
               children: [
                 Text(
                   countLabel,
                   style: TextStyle(color: tokens.textMuted, fontSize: 11),
                 ),
-                if (badgeLabel != null) ...[
-                  const SizedBox(width: 8),
-                  AuroraBadge(
-                    label: badgeLabel!,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    fontSize: 10,
-                  ),
-                ],
               ],
             ),
           ],
@@ -957,20 +1190,18 @@ class _ColumnSummaryTile extends StatelessWidget {
   }
 }
 
-// Tile de coluna com valor fixo editavel.
+// Tile de item fixo editavel.
 class _ColumnValueTile extends StatelessWidget {
   final String title;
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onApply;
-  final String? badgeLabel;
 
   const _ColumnValueTile({
     required this.title,
     required this.controller,
     required this.onChanged,
     required this.onApply,
-    this.badgeLabel,
   });
 
   @override
@@ -978,67 +1209,84 @@ class _ColumnValueTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
     final tokens = AppThemeTokens.of(context);
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-      decoration: BoxDecoration(
-        color: tokens.surfaceAlt,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: tokens.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: tokens.textSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isTight = constraints.maxHeight < 100;
+        return Container(
+          padding: EdgeInsets.fromLTRB(
+            AppLayout.spaceMd,
+            isTight ? AppLayout.spaceSm : AppLayout.spaceMd,
+            AppLayout.spaceMd,
+            isTight ? AppLayout.spaceXs : AppLayout.spaceSm,
           ),
-          const Spacer(),
-          Focus(
-            onFocusChange: (hasFocus) {
-              if (!hasFocus) {
-                onApply(controller.text);
-              }
-            },
-            child: TextField(
-              controller: controller,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                CurrencyInputFormatter(
-                  locale: settings.currencyLocale,
-                  symbol: settings.currencySymbol,
-                ),
-              ],
-              style: TextStyle(color: tokens.textPrimary, fontSize: 14),
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                isDense: true,
-                hintText: '0,00',
-                hintStyle: TextStyle(color: tokens.textMuted),
+          decoration: BoxDecoration(
+            color: tokens.surfaceAlt,
+            borderRadius: BorderRadius.circular(AppLayout.radiusMd),
+            border: Border.all(color: tokens.border),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.push_pin, size: 12, color: tokens.textMuted),
+                  const SizedBox(width: AppLayout.spaceSm),
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: tokens.textSecondary,
+                        fontSize: isTight ? 11 : 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              onChanged: (value) {
-                onChanged(value);
-                onApply(value);
-              },
-              onEditingComplete: () => onApply(controller.text),
-              onSubmitted: (_) => onApply(controller.text),
-            ),
+              const SizedBox(height: AppLayout.spaceSm),
+              Focus(
+                onFocusChange: (hasFocus) {
+                  if (!hasFocus) {
+                    onApply(controller.text);
+                  }
+                },
+                child: TextField(
+                  controller: controller,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [
+                    CurrencyInputFormatter(
+                      locale: settings.currencyLocale,
+                      symbol: settings.currencySymbol,
+                    ),
+                  ],
+                  style: TextStyle(
+                    color: tokens.textPrimary,
+                    fontSize: isTight ? 13 : 14,
+                  ),
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    isDense: true,
+                    hintText: '0,00',
+                    hintStyle: TextStyle(color: tokens.textMuted),
+                  ),
+                  onChanged: (value) {
+                    onChanged(value);
+                    onApply(value);
+                  },
+                  onEditingComplete: () => onApply(controller.text),
+                  onSubmitted: (_) => onApply(controller.text),
+                ),
+              ),
+              // Indicador removido para evitar overflow em tiles compactos.
+            ],
           ),
-          if (badgeLabel != null) ...[
-            const SizedBox(height: 6),
-            AuroraBadge(
-              label: badgeLabel!,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              fontSize: 10,
-            ),
-          ],
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -1054,18 +1302,18 @@ class _TotalFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = AppThemeTokens.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppLayout.spaceLg,
+        vertical: AppLayout.spaceMd,
+      ),
       decoration: BoxDecoration(
         color: tokens.surfaceStrong,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppLayout.radiusLg),
         border: Border.all(color: tokens.borderStrong),
       ),
       child: Row(
         children: [
-          Text(
-            'Total do mes',
-            style: TextStyle(color: tokens.textSecondary),
-          ),
+          Text('Total do mes', style: TextStyle(color: tokens.textSecondary)),
           const Spacer(),
           Text(
             label,
@@ -1081,7 +1329,7 @@ class _TotalFooter extends StatelessWidget {
   }
 }
 
-// Botao compacto para acoes de coluna.
+// Botao compacto para acoes do item.
 class _TinyIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -1095,8 +1343,8 @@ class _TinyIconButton extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: Icon(icon, size: 16, color: tokens.textSecondary),
+        padding: const EdgeInsets.all(AppLayout.spaceXs),
+        child: Icon(icon, size: AppLayout.iconSm, color: tokens.textSecondary),
       ),
     );
   }

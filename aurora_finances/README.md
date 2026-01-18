@@ -7,6 +7,7 @@ App Flutter para controle financeiro pessoal com autenticacao (Email/Senha, Goog
 - Login social com Google e Microsoft
 - Dashboard com resumo de receitas, despesas, saldo e previsoes
 - Cadastro de receitas e despesas
+- Reordenacao de categorias e subcategorias por arraste
 - Importacao de fatura (PDF) com OCR e sugestao de lancamentos
 - Carteira/contas bancarias e categorias personalizadas
 - Preferencias de tema, moeda e formato de data por usuario
@@ -125,6 +126,10 @@ users/{uid}/categories/data
 - A importacao usa OCR local (ML Kit) e parsing do texto.
 - PDFs com senha sao suportados (sera solicitada na tela).
 - Faturas variam muito: revise os lancamentos sugeridos antes de salvar.
+
+## Organizacao de despesas
+- As despesas sao organizadas em categorias e subcategorias.
+- No layout de uma coluna (mobile), a ordem pode ser ajustada por arraste.
 
 ## Remocao de dados
 - Em Configuracoes: apagar dados do usuario ou excluir a conta.

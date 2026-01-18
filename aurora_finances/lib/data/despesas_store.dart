@@ -82,6 +82,17 @@ class DespesasStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Reordena categorias.
+  void reorderGroups(int oldIndex, int newIndex) {
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
+    }
+    final group = _groups.removeAt(oldIndex);
+    _groups.insert(newIndex, group);
+    _persist();
+    notifyListeners();
+  }
+
   // Adiciona coluna dentro de um grupo.
   void addColumn(ExpenseGroup group, String title, {required bool requiresEntries}) {
     group.columns.add(
@@ -103,6 +114,17 @@ class DespesasStore extends ChangeNotifier {
     group.columns.removeWhere((item) => item.id == column.id);
     _entries.removeWhere((entry) => entry.columnId == column.id);
     _simpleValues.removeWhere((key, _) => key.endsWith('|${column.id}'));
+    _persist();
+    notifyListeners();
+  }
+
+  // Reordena subcategorias dentro de uma categoria.
+  void reorderColumns(ExpenseGroup group, int oldIndex, int newIndex) {
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
+    }
+    final column = group.columns.removeAt(oldIndex);
+    group.columns.insert(newIndex, column);
     _persist();
     notifyListeners();
   }
