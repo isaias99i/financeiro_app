@@ -228,7 +228,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => SettingsScreen(categoriesStore: _categoriesStore),
+        builder: (context) => SettingsScreen(
+          categoriesStore: _categoriesStore,
+          receitasStore: _receitasStore,
+          despesasStore: _despesasStore,
+          carteiraStore: _carteiraStore,
+        ),
       ),
     );
   }
