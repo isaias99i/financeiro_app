@@ -4,10 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-// Estilos de tema disponiveis.
-enum AppThemeStyle { aurora, dusk, glacier }
-// Nivel de contraste do tema.
-enum ContrastLevel { normal, high }
 // Escalas de tipografia.
 enum TypographyScale { small, normal, large, xlarge }
 // Fontes preferidas do app.
@@ -24,8 +20,7 @@ class AppSettingsStore extends ChangeNotifier {
   final FirebaseFirestore _firestore;
   String? _userId;
 
-  AppThemeStyle themeStyle = AppThemeStyle.aurora;
-  ContrastLevel contrastLevel = ContrastLevel.normal;
+  String themePresetId = 'aurora_dawn';
   TypographyScale typographyScale = TypographyScale.normal;
   AppFontFamily fontFamily = AppFontFamily.spaceGrotesk;
   String currencyLocale = 'pt_BR';
@@ -50,8 +45,7 @@ class AppSettingsStore extends ChangeNotifier {
     final doc = await _docRef().get();
     if (doc.exists) {
       final decoded = doc.data() ?? <String, dynamic>{};
-      themeStyle = _themeFromName(decoded['themeStyle'] as String?);
-      contrastLevel = _contrastFromName(decoded['contrastLevel'] as String?);
+      themePresetId = (decoded['themePresetId'] as String?) ?? themePresetId;
       typographyScale = _scaleFromName(decoded['typographyScale'] as String?);
       fontFamily = _fontFromName(decoded['fontFamily'] as String?);
       currencyLocale = (decoded['currencyLocale'] as String?) ?? currencyLocale;
@@ -79,14 +73,8 @@ class AppSettingsStore extends ChangeNotifier {
   }
 
   // Atualiza o tema e persiste.
-  void updateTheme(AppThemeStyle style) {
-    themeStyle = style;
-    _persist();
-  }
-
-  // Atualiza o contraste e persiste.
-  void updateContrast(ContrastLevel level) {
-    contrastLevel = level;
+  void updateThemePreset(String presetId) {
+    themePresetId = presetId;
     _persist();
   }
 
@@ -188,8 +176,7 @@ class AppSettingsStore extends ChangeNotifier {
   void _persist() {
     if (!_isLoaded || _userId == null) return;
     final payload = jsonEncode({
-      'themeStyle': themeStyle.name,
-      'contrastLevel': contrastLevel.name,
+      'themePresetId': themePresetId,
       'typographyScale': typographyScale.name,
       'fontFamily': fontFamily.name,
       'currencyLocale': currencyLocale,
@@ -201,22 +188,6 @@ class AppSettingsStore extends ChangeNotifier {
     final decoded = jsonDecode(payload) as Map<String, dynamic>;
     _docRef().set(decoded);
     notifyListeners();
-  }
-
-  // Converte string para enum de tema.
-  AppThemeStyle _themeFromName(String? name) {
-    return AppThemeStyle.values.firstWhere(
-      (value) => value.name == name,
-      orElse: () => AppThemeStyle.aurora,
-    );
-  }
-
-  // Converte string para enum de contraste.
-  ContrastLevel _contrastFromName(String? name) {
-    return ContrastLevel.values.firstWhere(
-      (value) => value.name == name,
-      orElse: () => ContrastLevel.normal,
-    );
   }
 
   // Converte string para enum de tipografia.
@@ -254,8 +225,7 @@ class AppSettingsStore extends ChangeNotifier {
 
   // Restaura valores padrao.
   void _resetDefaults() {
-    themeStyle = AppThemeStyle.aurora;
-    contrastLevel = ContrastLevel.normal;
+    themePresetId = 'aurora_dawn';
     typographyScale = TypographyScale.normal;
     fontFamily = AppFontFamily.spaceGrotesk;
     currencyLocale = 'pt_BR';

@@ -4,6 +4,8 @@ import '../data/settings_store.dart';
 import '../models/menu_models.dart';
 import '../widgets/app_settings_scope.dart';
 import '../widgets/aurora_scaffold.dart';
+import '../theme/app_layout.dart';
+import '../theme/app_tokens.dart';
 
 // Tela de rotulos e cores dos indicadores.
 class LabelsColorsScreen extends StatelessWidget {
@@ -13,13 +15,14 @@ class LabelsColorsScreen extends StatelessWidget {
   // Monta o editor de rotulos e cores.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
+    final tokens = AppThemeTokens.of(context);
 
     return AuroraScaffold(
       appBar: AppBar(
         title: const Text('Rotulos e cores'),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppLayout.spaceLg),
         children: [
           _SectionCard(
             title: 'Indicadores',
@@ -29,6 +32,7 @@ class LabelsColorsScreen extends StatelessWidget {
                 return _MetricEditor(
                   metric: metric,
                   settings: settings,
+                  tokens: tokens,
                 );
               }).toList(),
             ),
@@ -43,10 +47,12 @@ class LabelsColorsScreen extends StatelessWidget {
 class _MetricEditor extends StatefulWidget {
   final MenuMetric metric;
   final AppSettingsStore settings;
+  final AppThemeTokens tokens;
 
   const _MetricEditor({
     required this.metric,
     required this.settings,
+    required this.tokens,
   });
 
   @override
@@ -93,56 +99,56 @@ class _MetricEditorState extends State<_MetricEditor> {
   // Monta o card de edicao do indicador.
   Widget build(BuildContext context) {
     final key = menuMetricKey(widget.metric);
-    final fallbackColor = _defaultMetricColor(widget.metric);
+    final fallbackColor = _defaultMetricColor(widget.metric, widget.tokens);
     final selectedColor = widget.settings.colorForMetric(key, fallbackColor);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppLayout.spaceMd),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        color: widget.tokens.surfaceAlt,
+        borderRadius: BorderRadius.circular(AppLayout.radiusLgTight),
+        border: Border.all(color: widget.tokens.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             menuMetricTitle(widget.metric),
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: widget.tokens.textPrimary,
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppLayout.spaceSm),
           TextField(
             controller: _controller,
             onChanged: (value) => widget.settings.updateMetricLabel(key, value),
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: widget.tokens.textPrimary),
             decoration: InputDecoration(
               labelText: 'Rotulo',
               filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.06),
-              labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+              fillColor: widget.tokens.surfaceAlt,
+              labelStyle: TextStyle(color: widget.tokens.textSecondary),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+                borderRadius: BorderRadius.circular(AppLayout.radiusMd),
+                borderSide: BorderSide(color: widget.tokens.border),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF7FD7FF), width: 1.2),
+                borderRadius: BorderRadius.circular(AppLayout.radiusMd),
+                borderSide: BorderSide(color: widget.tokens.focus, width: 1.2),
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppLayout.spaceMd),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _colorOptions.map((color) {
+            spacing: AppLayout.spaceSm,
+            runSpacing: AppLayout.spaceSm,
+            children: widget.tokens.metricPaletteColors.map((color) {
               final isSelected = color.toARGB32() == selectedColor.toARGB32();
               return InkWell(
                 onTap: () => widget.settings.updateMetricColor(key, color),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(AppLayout.radiusXl),
                 child: Container(
                   width: 30,
                   height: 30,
@@ -150,7 +156,9 @@ class _MetricEditorState extends State<_MetricEditor> {
                     color: color,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected ? Colors.white : Colors.transparent,
+                      color: isSelected
+                          ? widget.tokens.textPrimary
+                          : widget.tokens.background.withValues(alpha: 0.0),
                       width: 2,
                     ),
                   ),
@@ -164,14 +172,15 @@ class _MetricEditorState extends State<_MetricEditor> {
   }
 
   // Define a cor padrao para cada indicador.
-  Color _defaultMetricColor(MenuMetric metric) {
+  Color _defaultMetricColor(MenuMetric metric, AppThemeTokens tokens) {
     return switch (metric) {
-      MenuMetric.receitas => const Color(0xFF1FAF86),
-      MenuMetric.despesas => const Color(0xFF2A2D3C),
-      MenuMetric.saldoMensal => const Color(0xFF1C8EC9),
-      MenuMetric.saldoAposReserva => const Color(0xFF1D9C7C),
-      MenuMetric.saldoAtual => const Color(0xFF1C7C9C),
-      MenuMetric.segurancaAno => const Color(0xFF3D5BA9),
+      MenuMetric.receitas => tokens.metricColor(MetricColorRole.receitas),
+      MenuMetric.despesas => tokens.metricColor(MetricColorRole.despesas),
+      MenuMetric.saldoMensal => tokens.metricColor(MetricColorRole.saldoMensalPositivo),
+      MenuMetric.saldoAposReserva =>
+        tokens.metricColor(MetricColorRole.saldoAposReservaPositivo),
+      MenuMetric.saldoAtual => tokens.metricColor(MetricColorRole.saldoAtual),
+      MenuMetric.segurancaAno => tokens.metricColor(MetricColorRole.segurancaAno),
     };
   }
 }
@@ -191,43 +200,33 @@ class _SectionCard extends StatelessWidget {
   @override
   // Monta o card de secao.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(AppLayout.spaceLgTight),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        color: tokens.surfaceAlt,
+        borderRadius: BorderRadius.circular(AppLayout.radiusLg),
+        border: Border.all(color: tokens.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: tokens.textPrimary,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppLayout.spaceXs),
           Text(
             subtitle,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+            style: TextStyle(color: tokens.textSecondary),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppLayout.spaceMd),
           child,
         ],
       ),
     );
   }
 }
-
-const List<Color> _colorOptions = [
-  Color(0xFF1C8EC9),
-  Color(0xFF1FAF86),
-  Color(0xFFE19932),
-  Color(0xFFE36A4F),
-  Color(0xFF3D5BA9),
-  Color(0xFF254A6A),
-  Color(0xFF8E44AD),
-  Color(0xFF2ECC71),
-];

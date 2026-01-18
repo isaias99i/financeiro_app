@@ -14,6 +14,7 @@ import '../widgets/carteira_widget.dart';
 import '../widgets/resumo_financeiro_widget.dart';
 import '../widgets/aurora_scaffold.dart';
 import '../widgets/app_settings_scope.dart';
+import '../theme/app_tokens.dart';
 
 // Tela principal com resumo e indicadores financeiros.
 class DashboardScreen extends StatefulWidget {
@@ -330,12 +331,13 @@ class _PeriodChip extends StatelessWidget {
   @override
   // Monta o chip individual.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     final gradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [
-        const Color(0xFF1C8EC9).withValues(alpha: 0.5),
-        const Color(0xFF1FAF86).withValues(alpha: 0.35),
+        tokens.primary.withValues(alpha: 0.5),
+        tokens.secondary.withValues(alpha: 0.35),
       ],
     );
 
@@ -347,19 +349,19 @@ class _PeriodChip extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: isSelected ? gradient : null,
           color: isSelected
-              ? Colors.transparent
-              : Colors.white.withValues(alpha: 0.08),
+              ? tokens.background.withValues(alpha: 0.0)
+              : tokens.surfaceAlt,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
             color: isSelected
-                ? Colors.white.withValues(alpha: 0.35)
-                : Colors.white.withValues(alpha: 0.2),
+                ? tokens.borderStrong
+                : tokens.border,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: Colors.white,
+            color: tokens.textPrimary,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             fontSize: 12,
           ),
@@ -388,9 +390,8 @@ class _HeroSaldoCard extends StatelessWidget {
   @override
   // Monta o card de saldo principal.
   Widget build(BuildContext context) {
-    final variationColor = variation.isPositive
-        ? const Color(0xFF1FAF86)
-        : const Color(0xFFE36A4F);
+    final tokens = AppThemeTokens.of(context);
+    final variationColor = variation.isPositive ? tokens.success : tokens.danger;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -399,21 +400,21 @@ class _HeroSaldoCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFF1C8EC9).withValues(alpha: 0.35),
-            const Color(0xFF1FAF86).withValues(alpha: 0.22),
+            tokens.primary.withValues(alpha: 0.35),
+            tokens.secondary.withValues(alpha: 0.22),
           ],
         ),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+        border: Border.all(color: tokens.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Text(
+              Text(
                 'Saldo atual',
-                style: TextStyle(color: Colors.white70, fontSize: 12),
+                style: TextStyle(color: tokens.textMuted, fontSize: 12),
               ),
               const Spacer(),
               if (variation.isAvailable)
@@ -437,8 +438,8 @@ class _HeroSaldoCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             formatter.format(saldoAtual),
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: tokens.textPrimary,
               fontSize: 26,
               fontWeight: FontWeight.w700,
             ),
@@ -448,13 +449,13 @@ class _HeroSaldoCard extends StatelessWidget {
             children: [
               Text(
                 periodLabel,
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+                style: TextStyle(color: tokens.textSecondary),
               ),
               const Spacer(),
               Text(
                 formatter.format(saldoPeriodo),
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: tokens.textPrimary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -513,17 +514,18 @@ class _ForecastCard extends StatelessWidget {
   @override
   // Monta o card de projecao e slider.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     if (values.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.05),
+          color: tokens.surfaceAlt,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          border: Border.all(color: tokens.border),
         ),
-        child: const Text(
+        child: Text(
           'Sem dados para projecao.',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: tokens.textSecondary),
         ),
       );
     }
@@ -537,32 +539,32 @@ class _ForecastCard extends StatelessWidget {
         : 0.0;
     final trendUp = average >= 0;
     final trendLabel = trendUp ? 'Saldo positivo' : 'Saldo negativo';
-    final trendColor = trendUp ? const Color(0xFF1FAF86) : const Color(0xFFE36A4F);
+    final trendColor = trendUp ? tokens.success : tokens.danger;
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: tokens.surfaceAlt,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(color: tokens.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Text(
+              Text(
                 'Projecao futura',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: tokens.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const Spacer(),
               Text(
                 formatter.format(latest),
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: tokens.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -587,7 +589,7 @@ class _ForecastCard extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 formatter.format(average.abs()),
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
+                style: TextStyle(color: tokens.textMuted, fontSize: 12),
               ),
             ],
           ),
@@ -601,6 +603,8 @@ class _ForecastCard extends StatelessWidget {
                 min: min,
                 max: max,
                 color: trendColor,
+                axisColor: tokens.border,
+                labelColor: tokens.textMuted,
                 labelFormatter: formatter,
               ),
             ),
@@ -611,12 +615,12 @@ class _ForecastCard extends StatelessWidget {
               children: [
                 Text(
                   monthLabels.first,
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
+                  style: TextStyle(color: tokens.textMuted, fontSize: 11),
                 ),
                 const Spacer(),
                 Text(
                   monthLabels.last,
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
+                  style: TextStyle(color: tokens.textMuted, fontSize: 11),
                 ),
               ],
             ),
@@ -626,7 +630,7 @@ class _ForecastCard extends StatelessWidget {
             children: [
               Text(
                 'Meses: $months',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+                style: TextStyle(color: tokens.textSecondary),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -636,8 +640,8 @@ class _ForecastCard extends StatelessWidget {
                   max: 24,
                   divisions: 7,
                   onChanged: (value) => onChanged(value.round()),
-                  activeColor: const Color(0xFF7FD7FF),
-                  inactiveColor: Colors.white.withValues(alpha: 0.15),
+                  activeColor: tokens.accent,
+                  inactiveColor: tokens.border,
                 ),
               ),
             ],
@@ -654,6 +658,8 @@ class _ForecastChartPainter extends CustomPainter {
   final double min;
   final double max;
   final Color color;
+  final Color axisColor;
+  final Color labelColor;
   final NumberFormat labelFormatter;
 
   _ForecastChartPainter({
@@ -661,6 +667,8 @@ class _ForecastChartPainter extends CustomPainter {
     required this.min,
     required this.max,
     required this.color,
+    required this.axisColor,
+    required this.labelColor,
     required this.labelFormatter,
   });
 
@@ -673,7 +681,7 @@ class _ForecastChartPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.2;
     final axisPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.12)
+      ..color = axisColor
       ..strokeWidth = 1;
 
     final range = (max - min).abs() < 0.01 ? 0.0 : (max - min);
@@ -712,7 +720,7 @@ class _ForecastChartPainter extends CustomPainter {
 
     if (values.length >= 2) {
       final labelStyle = TextStyle(
-        color: Colors.white.withValues(alpha: 0.7),
+        color: labelColor,
         fontSize: 10,
         fontWeight: FontWeight.w600,
       );

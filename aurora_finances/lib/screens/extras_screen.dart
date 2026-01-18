@@ -3,6 +3,7 @@ import '../models/receitas_models.dart';
 import '../utils/currency_input_formatter.dart';
 import '../widgets/aurora_scaffold.dart';
 import '../widgets/app_settings_scope.dart';
+import '../theme/app_tokens.dart';
 
 // Tela simples para listar e editar extras.
 class ExtrasScreen extends StatefulWidget {
@@ -37,6 +38,7 @@ class _ExtrasScreenState extends State<ExtrasScreen> {
   // Monta a lista de extras.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
+    final tokens = AppThemeTokens.of(context);
     final formatter = settings.dateFormatter();
     final title = widget.filterMonth == null
         ? 'Extras'
@@ -64,21 +66,21 @@ class _ExtrasScreenState extends State<ExtrasScreen> {
         itemBuilder: (context, index) {
           final entry = entries[index];
           return Card(
-            color: Colors.white.withValues(alpha: 0.08),
+            color: tokens.surfaceAlt,
             child: ListTile(
               title: Text(
                 entry.note.isEmpty ? 'Extra' : entry.note,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: tokens.textPrimary),
               ),
               subtitle: Text(
                 formatter.format(entry.date),
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+                style: TextStyle(color: tokens.textSecondary),
               ),
               trailing: Text(
                 settings.currencyFormatter().format(entry.amount),
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                style: TextStyle(color: tokens.textPrimary, fontWeight: FontWeight.w600),
               ),
-              leading: const Icon(Icons.star, color: Colors.white),
+              leading: Icon(Icons.star, color: tokens.textPrimary),
               onLongPress: () {
                 setState(() {
                   _entries.remove(entry);

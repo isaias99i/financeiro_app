@@ -89,6 +89,7 @@ class AuthGate extends StatefulWidget {
   State<AuthGate> createState() => _AuthGateState();
 }
 
+// Estado do AuthGate com controle de sessao e carregamento.
 class _AuthGateState extends State<AuthGate> {
   late final Stream<User?> _authStream;
   User? _user;

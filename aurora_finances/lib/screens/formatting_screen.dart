@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../data/settings_store.dart';
 import '../widgets/app_settings_scope.dart';
 import '../widgets/aurora_scaffold.dart';
+import '../theme/app_layout.dart';
+import '../theme/app_tokens.dart';
 
 // Tela de configuracao de moeda e data.
 class FormattingScreen extends StatelessWidget {
@@ -12,13 +14,14 @@ class FormattingScreen extends StatelessWidget {
   // Monta as opcoes de formato e moeda.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
+    final tokens = AppThemeTokens.of(context);
 
     return AuroraScaffold(
       appBar: AppBar(
         title: const Text('Moeda e formato'),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppLayout.spaceLg),
         children: [
           _SectionCard(
             title: 'Moeda',
@@ -33,18 +36,18 @@ class FormattingScreen extends StatelessWidget {
                 children: _currencies.map((currency) {
                   return RadioListTile<_CurrencyOption>(
                     value: currency,
-                    title: Text(currency.label, style: const TextStyle(color: Colors.white)),
+                    title: Text(currency.label, style: TextStyle(color: tokens.textPrimary)),
                     subtitle: Text(
                       '${currency.symbol} - ${currency.locale}',
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.65)),
+                      style: TextStyle(color: tokens.textMuted),
                     ),
-                    activeColor: Colors.white,
+                    activeColor: tokens.accent,
                   );
                 }).toList(),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppLayout.spaceMd),
           _SectionCard(
             title: 'Formato de data',
             subtitle: 'Padrao exibido no app',
@@ -58,8 +61,8 @@ class FormattingScreen extends StatelessWidget {
                 children: DateFormatStyle.values.map((style) {
                   return RadioListTile<DateFormatStyle>(
                     value: style,
-                    title: Text(_dateLabel(style), style: const TextStyle(color: Colors.white)),
-                    activeColor: Colors.white,
+                    title: Text(_dateLabel(style), style: TextStyle(color: tokens.textPrimary)),
+                    activeColor: tokens.accent,
                   );
                 }).toList(),
               ),
@@ -123,29 +126,30 @@ class _SectionCard extends StatelessWidget {
   @override
   // Monta o card de secao.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(AppLayout.spaceLgTight),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        color: tokens.surfaceAlt,
+        borderRadius: BorderRadius.circular(AppLayout.radiusLg),
+        border: Border.all(color: tokens.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: tokens.textPrimary,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppLayout.spaceXs),
           Text(
             subtitle,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+            style: TextStyle(color: tokens.textSecondary),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppLayout.spaceSm),
           child,
         ],
       ),

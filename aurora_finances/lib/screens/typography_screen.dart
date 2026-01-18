@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../data/settings_store.dart';
 import '../widgets/app_settings_scope.dart';
 import '../widgets/aurora_scaffold.dart';
+import '../theme/app_layout.dart';
+import '../theme/app_tokens.dart';
 
 // Tela de configuracao de tipografia.
 class TypographyScreen extends StatelessWidget {
@@ -12,21 +14,22 @@ class TypographyScreen extends StatelessWidget {
   // Monta as opcoes de fonte e escala.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
+    final tokens = AppThemeTokens.of(context);
 
     return AuroraScaffold(
       appBar: AppBar(
         title: const Text('Tipografia'),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppLayout.spaceLg),
         children: [
           _SectionCard(
             title: 'Fonte',
             subtitle: 'Escolha a familia tipografica',
             child: DropdownButtonFormField<AppFontFamily>(
               initialValue: settings.fontFamily,
-              decoration: _inputDecoration(),
-              dropdownColor: const Color(0xFF0F2C3E),
+              decoration: _inputDecoration(tokens),
+              dropdownColor: tokens.surface,
               items: AppFontFamily.values
                   .map(
                     (font) => DropdownMenuItem(
@@ -41,7 +44,7 @@ class TypographyScreen extends StatelessWidget {
               },
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppLayout.spaceMd),
           _SectionCard(
             title: 'Tamanho',
             subtitle: 'Ajuste o tamanho do texto',
@@ -60,7 +63,7 @@ class TypographyScreen extends StatelessWidget {
                 ),
                 Text(
                   'Exemplo: O seu saldo atual esta sempre visivel.',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
+                  style: TextStyle(color: tokens.textSecondary),
                 ),
               ],
             ),
@@ -98,17 +101,17 @@ class TypographyScreen extends StatelessWidget {
   }
 
   // Cria decoracao padrao dos campos.
-  InputDecoration _inputDecoration() {
+  InputDecoration _inputDecoration(AppThemeTokens tokens) {
     return InputDecoration(
       filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.06),
+      fillColor: tokens.surfaceAlt,
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+        borderRadius: BorderRadius.circular(AppLayout.radiusMd),
+        borderSide: BorderSide(color: tokens.border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF7FD7FF), width: 1.2),
+        borderRadius: BorderRadius.circular(AppLayout.radiusMd),
+        borderSide: BorderSide(color: tokens.focus, width: 1.2),
       ),
     );
   }
@@ -129,29 +132,30 @@ class _SectionCard extends StatelessWidget {
   @override
   // Monta o card de secao.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(AppLayout.spaceLgTight),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        color: tokens.surfaceAlt,
+        borderRadius: BorderRadius.circular(AppLayout.radiusLg),
+        border: Border.all(color: tokens.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: tokens.textPrimary,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppLayout.spaceXs),
           Text(
             subtitle,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+            style: TextStyle(color: tokens.textSecondary),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppLayout.spaceMd),
           child,
         ],
       ),

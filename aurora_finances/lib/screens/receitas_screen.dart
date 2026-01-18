@@ -7,6 +7,7 @@ import '../utils/currency_input_formatter.dart';
 import '../utils/month_key.dart';
 import '../widgets/aurora_scaffold.dart';
 import '../widgets/app_settings_scope.dart';
+import '../theme/app_tokens.dart';
 
 // Tela de receitas com salario e extras.
 class ReceitasScreen extends StatefulWidget {
@@ -57,6 +58,7 @@ class _ReceitasScreenState extends State<ReceitasScreen>
   // Monta a UI principal das receitas.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
+    final tokens = AppThemeTokens.of(context);
     final moneyFormatter = settings.currencyFormatter();
 
     return AuroraScaffold(
@@ -64,7 +66,7 @@ class _ReceitasScreenState extends State<ReceitasScreen>
         title: const Text('Receitas'),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.white,
+          indicatorColor: tokens.accent,
           tabs: const [
             Tab(text: 'Mensal'),
             Tab(text: 'Extras'),
@@ -194,38 +196,36 @@ class _ReceitasScreenState extends State<ReceitasScreen>
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
+            final tokens = AppThemeTokens.of(context);
             final inputDecoration = InputDecoration(
               filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.06),
-              labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
+              fillColor: tokens.surfaceAlt,
+              labelStyle: TextStyle(color: tokens.textSecondary),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+                borderSide: BorderSide(color: tokens.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF7FD7FF), width: 1.4),
+                borderSide: BorderSide(color: tokens.focus, width: 1.4),
               ),
             );
 
             return Dialog(
-              backgroundColor: Colors.transparent,
+              backgroundColor: tokens.background.withValues(alpha: 0.0),
               insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF101B24),
-                      Color(0xFF183446),
-                    ],
+                    colors: tokens.panelGradient,
                   ),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                  border: Border.all(color: tokens.border),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.45),
+                      color: tokens.shadow,
                       blurRadius: 20,
                       offset: const Offset(0, 12),
                     ),
@@ -241,10 +241,10 @@ class _ReceitasScreenState extends State<ReceitasScreen>
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.08),
+                              color: tokens.surfaceAlt,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.auto_awesome, color: Color(0xFF7FD7FF)),
+                            child: Icon(Icons.auto_awesome, color: tokens.accent),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -253,10 +253,10 @@ class _ReceitasScreenState extends State<ReceitasScreen>
                               children: [
                                 Text(
                                   entry == null ? 'Incluir extra' : 'Editar extra',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
-                                    color: Colors.white,
+                                    color: tokens.textPrimary,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -264,7 +264,7 @@ class _ReceitasScreenState extends State<ReceitasScreen>
                                   'Registre entradas fora do salario mensal.',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.white.withValues(alpha: 0.65),
+                                    color: tokens.textMuted,
                                   ),
                                 ),
                               ],
@@ -272,7 +272,7 @@ class _ReceitasScreenState extends State<ReceitasScreen>
                           ),
                           IconButton(
                             onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.close, color: Colors.white70),
+                            icon: Icon(Icons.close, color: tokens.textSecondary),
                           ),
                         ],
                       ),
@@ -283,7 +283,7 @@ class _ReceitasScreenState extends State<ReceitasScreen>
                         textCapitalization: TextCapitalization.words,
                         enableSuggestions: true,
                         autocorrect: true,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: tokens.textPrimary),
                         decoration: inputDecoration.copyWith(labelText: 'Descricao'),
                       ),
                       const SizedBox(height: 10),
@@ -296,24 +296,24 @@ class _ReceitasScreenState extends State<ReceitasScreen>
                             symbol: settings.currencySymbol,
                           ),
                         ],
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: tokens.textPrimary),
                         decoration: inputDecoration.copyWith(labelText: 'Valor'),
                       ),
                       const SizedBox(height: 10),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: TextButton.icon(
-                          icon: const Icon(Icons.calendar_today, color: Colors.white70),
+                          icon: Icon(Icons.calendar_today, color: tokens.textSecondary),
                           label: Text(
                             settings.dateFormatter().format(selectedDate),
-                            style: const TextStyle(color: Colors.white),
+                            style: TextStyle(color: tokens.textPrimary),
                           ),
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            backgroundColor: Colors.white.withValues(alpha: 0.08),
+                            backgroundColor: tokens.surfaceAlt,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+                              side: BorderSide(color: tokens.border),
                             ),
                           ),
                           onPressed: () async {
@@ -334,8 +334,8 @@ class _ReceitasScreenState extends State<ReceitasScreen>
                             child: OutlinedButton(
                               onPressed: () => Navigator.pop(context),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.white70,
-                                side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                                foregroundColor: tokens.textSecondary,
+                                side: BorderSide(color: tokens.border),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -375,8 +375,8 @@ class _ReceitasScreenState extends State<ReceitasScreen>
                                 _showSnack(entry == null ? 'Extra adicionado' : 'Extra atualizado');
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF3C8FD9),
-                                foregroundColor: Colors.white,
+                                backgroundColor: tokens.accent,
+                                foregroundColor: tokens.textPrimary,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -414,12 +414,13 @@ class _ReceitasScreenState extends State<ReceitasScreen>
 
   // Exibe snackbar com feedback rapido.
   void _showSnack(String message) {
+    final tokens = AppThemeTokens.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         duration: const Duration(milliseconds: 1600),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.white.withValues(alpha: 0.12),
+        backgroundColor: tokens.surfaceStrong,
       ),
     );
   }
@@ -505,20 +506,21 @@ class _ReceitaCard extends StatelessWidget {
   // Monta o card de receita.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
+    final tokens = AppThemeTokens.of(context);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
+        color: tokens.surfaceAlt,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(color: tokens.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: tokens.textPrimary,
               fontWeight: FontWeight.w600,
               fontSize: 16,
             ),
@@ -541,12 +543,12 @@ class _ReceitaCard extends StatelessWidget {
                     symbol: settings.currencySymbol,
                   ),
                 ],
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-                decoration: const InputDecoration(
+                style: TextStyle(color: tokens.textPrimary, fontSize: 14),
+                decoration: InputDecoration(
                   border: InputBorder.none,
                   isDense: true,
                   hintText: '0,00',
-                  hintStyle: TextStyle(color: Colors.white54),
+                  hintStyle: TextStyle(color: tokens.textMuted),
                 ),
                 onChanged: onSalaryChanged,
                 onEditingComplete: onSalarySaved,
@@ -559,7 +561,7 @@ class _ReceitaCard extends StatelessWidget {
             label: 'Extras',
             child: Text(
               extrasLabel,
-              style: const TextStyle(color: Colors.white70),
+              style: TextStyle(color: tokens.textSecondary),
             ),
           ),
           const SizedBox(height: 8),
@@ -567,8 +569,8 @@ class _ReceitaCard extends StatelessWidget {
             label: 'Total',
             child: Text(
               totalLabel,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: tokens.textPrimary,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -592,13 +594,14 @@ class _ReceitaRow extends StatelessWidget {
   @override
   // Monta a linha de label/valor.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return Row(
       children: [
         SizedBox(
           width: 80,
           child: Text(
             label,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+            style: TextStyle(color: tokens.textSecondary),
           ),
         ),
         Expanded(child: child),
@@ -633,6 +636,7 @@ class _ExtrasList extends StatelessWidget {
   // Monta a lista de extras e filtros.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
+    final tokens = AppThemeTokens.of(context);
     final dateFormatter = settings.dateFormatter();
     final filtered = filterMonth == null
         ? entries
@@ -663,31 +667,31 @@ class _ExtrasList extends StatelessWidget {
         }
         final entry = sorted[index - 1];
         return Card(
-          color: Colors.white.withValues(alpha: 0.08),
+          color: tokens.surfaceAlt,
           child: ListTile(
             onTap: () => onEdit(entry),
             title: Text(
               entry.note.isEmpty ? 'Extra' : entry.note,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: tokens.textPrimary),
             ),
             subtitle: Text(
               dateFormatter.format(entry.date),
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+              style: TextStyle(color: tokens.textSecondary),
             ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   formatter.format(entry.amount),
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: tokens.textPrimary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(width: 6),
                 IconButton(
                   onPressed: () => onRemove(entry),
-                  icon: const Icon(Icons.delete_outline, color: Colors.white70),
+                  icon: Icon(Icons.delete_outline, color: tokens.textSecondary),
                 ),
               ],
             ),
@@ -714,25 +718,26 @@ class _ExtrasFilterBar extends StatelessWidget {
   // Monta o filtro de meses.
   Widget build(BuildContext context) {
     final formatter = AppSettingsScope.of(context).shortMonthYearFormatter();
+    final tokens = AppThemeTokens.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
+        color: tokens.surfaceAlt,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(color: tokens.border),
       ),
       child: Row(
         children: [
-          const Icon(Icons.calendar_today, size: 16, color: Colors.white70),
+          Icon(Icons.calendar_today, size: 16, color: tokens.textSecondary),
           const SizedBox(width: 8),
           Expanded(
             child: DropdownButtonHideUnderline(
               child: DropdownButton<DateTime?>(
                 value: selected,
                 isExpanded: true,
-                dropdownColor: const Color(0xFF0F2C3E),
-                icon: const Icon(Icons.expand_more, color: Colors.white70),
-                style: const TextStyle(color: Colors.white),
+                dropdownColor: tokens.surface,
+                icon: Icon(Icons.expand_more, color: tokens.textSecondary),
+                style: TextStyle(color: tokens.textPrimary),
                 items: [
                   const DropdownMenuItem<DateTime?>(
                     value: null,
@@ -763,22 +768,23 @@ class _EmptyExtras extends StatelessWidget {
   @override
   // Monta o estado vazio de extras.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return Center(
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.06),
+          color: tokens.surfaceAlt,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          border: Border.all(color: tokens.border),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.savings, color: Colors.white70, size: 32),
+            Icon(Icons.savings, color: tokens.textSecondary, size: 32),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Nenhum extra registrado.',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: tokens.textPrimary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),

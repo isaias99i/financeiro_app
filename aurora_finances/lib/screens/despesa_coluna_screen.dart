@@ -11,6 +11,7 @@ import '../widgets/aurora_badge.dart';
 import '../widgets/aurora_scaffold.dart';
 import '../screens/categorias_screen.dart';
 import '../widgets/app_settings_scope.dart';
+import '../theme/app_tokens.dart';
 
 // Tela de lancamentos detalhados de uma coluna.
 class DespesaColunaScreen extends StatefulWidget {
@@ -56,6 +57,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
   // Monta a UI com lista de lancamentos.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
+    final tokens = AppThemeTokens.of(context);
     final dateFormatter = settings.dateFormatter();
     final monthFormatter = settings.monthYearFormatter();
     final moneyFormatter = settings.currencyFormatter();
@@ -106,32 +108,32 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                           itemBuilder: (context, index) {
                             final entry = entries[index];
                             return Card(
-                              color: Colors.white.withValues(alpha: 0.08),
+                              color: tokens.surfaceAlt,
                               child: ListTile(
                                 onTap: () => _showEditDialog(entry),
-                                leading: const Icon(Icons.receipt_long, color: Colors.white70),
+                                leading: Icon(Icons.receipt_long, color: tokens.textSecondary),
                                 title: Text(
                                   entry.category.isEmpty ? 'Sem categoria' : entry.category,
-                                  style: const TextStyle(color: Colors.white),
+                                  style: TextStyle(color: tokens.textPrimary),
                                 ),
                                 subtitle: Text(
                                   _subtitleForEntry(entry, dateFormatter),
-                                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+                                  style: TextStyle(color: tokens.textSecondary),
                                 ),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
                                       moneyFormatter.format(entry.amount),
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      style: TextStyle(
+                                        color: tokens.textPrimary,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                     const SizedBox(width: 6),
                                     IconButton(
                                       onPressed: () => _removeEntry(entry),
-                                      icon: const Icon(Icons.delete_outline, color: Colors.white70),
+                                      icon: Icon(Icons.delete_outline, color: tokens.textSecondary),
                                     ),
                                   ],
                                 ),
@@ -209,6 +211,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
     await showDialog<void>(
       context: context,
       builder: (context) {
+        final tokens = AppThemeTokens.of(context);
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
@@ -221,16 +224,16 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.06),
+                          color: tokens.surfaceAlt,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                          border: Border.all(color: tokens.border),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Nenhuma categoria cadastrada.',
-                              style: TextStyle(color: Colors.white),
+                              style: TextStyle(color: tokens.textPrimary),
                             ),
                             const SizedBox(height: 6),
                             TextButton.icon(
@@ -521,12 +524,13 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
 
   // Exibe snackbar com feedback rapido.
   void _showSnack(String message) {
+    final tokens = AppThemeTokens.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         duration: const Duration(milliseconds: 1600),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.white.withValues(alpha: 0.12),
+        backgroundColor: tokens.surfaceStrong,
       ),
     );
   }
@@ -557,23 +561,21 @@ class _HeaderSummary extends StatelessWidget {
   @override
   // Monta o cabecalho de resumo.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF1C8EC9).withValues(alpha: 0.22),
-            const Color(0xFF1FAF86).withValues(alpha: 0.18),
-          ],
+          colors: tokens.heroGradient,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(color: tokens.border),
       ),
       child: Row(
         children: [
-          const Icon(Icons.account_balance_wallet, color: Colors.white70),
+          Icon(Icons.account_balance_wallet, color: tokens.textSecondary),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -581,13 +583,13 @@ class _HeaderSummary extends StatelessWidget {
               children: [
                 Text(
                   monthLabel,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  style: TextStyle(color: tokens.textMuted, fontSize: 12),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   totalLabel,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: tokens.textPrimary,
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                   ),
@@ -611,22 +613,23 @@ class _EmptyEntries extends StatelessWidget {
   @override
   // Monta o card de estado vazio.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return Center(
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.06),
+          color: tokens.surfaceAlt,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          border: Border.all(color: tokens.border),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.receipt_long, color: Colors.white70, size: 32),
+            Icon(Icons.receipt_long, color: tokens.textSecondary, size: 32),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Nenhum gasto cadastrado neste mês.',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: tokens.textPrimary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),

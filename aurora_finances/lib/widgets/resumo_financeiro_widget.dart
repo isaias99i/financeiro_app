@@ -8,6 +8,8 @@ import '../models/menu_models.dart';
 import '../screens/despesas_screen.dart';
 import '../screens/receitas_screen.dart';
 import '../widgets/app_settings_scope.dart';
+import '../theme/app_tokens.dart';
+import '../theme/app_layout.dart';
 
 // Widget do resumo financeiro com indicadores reordenaveis.
 class ResumoFinanceiroWidget extends StatefulWidget {
@@ -49,12 +51,13 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
   // Monta a UI com indicadores e painel expansivel.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
+    final tokens = AppThemeTokens.of(context);
     return AnimatedBuilder(
       animation: widget.menuStore,
       builder: (context, _) {
         return ExpansionPanelList(
           elevation: 0,
-          dividerColor: Colors.white.withValues(alpha: 0.1),
+          dividerColor: tokens.border,
           expandedHeaderPadding: EdgeInsets.zero,
           expansionCallback: (int index, bool isExpanded) {
             setState(() {
@@ -63,30 +66,43 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
           },
           children: [
             ExpansionPanel(
-              backgroundColor: Colors.white.withValues(alpha: 0.05),
+              backgroundColor: tokens.surfaceAlt,
               isExpanded: _isExpanded,
               headerBuilder: (BuildContext context, bool isExpanded) {
-                return const ListTile(
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppLayout.spaceLg,
+                    vertical: AppLayout.spaceXs,
+                  ),
                   title: Text(
                     'Resumo Financeiro',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: tokens.textPrimary,
                     ),
                   ),
                 );
               },
               body: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                padding: const EdgeInsets.fromLTRB(
+                  AppLayout.spaceLg,
+                  AppLayout.spaceSm,
+                  AppLayout.spaceLg,
+                  AppLayout.spaceLg,
+                ),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                    color: tokens.surfaceAlt,
+                    borderRadius: BorderRadius.circular(AppLayout.radiusLg),
+                    border: Border.all(color: tokens.border),
                   ),
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppLayout.spaceMd,
+                    AppLayout.spaceMd,
+                    AppLayout.spaceMd,
+                    AppLayout.spaceMd,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -98,7 +114,7 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.2,
-                              color: Colors.white.withValues(alpha: 0.9),
+                              color: tokens.textPrimary,
                             ),
                           ),
                           const Spacer(),
@@ -107,12 +123,12 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
-                              color: Colors.white.withValues(alpha: 0.6),
+                              color: tokens.textMuted,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppLayout.spaceSm),
                       ReorderableListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
@@ -121,7 +137,7 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
                         onReorder: widget.menuStore.reorderOrderedItems,
                         proxyDecorator: (child, index, animation) {
                           return Material(
-                            color: Colors.transparent,
+                            color: tokens.background.withValues(alpha: 0.0),
                             child: FadeTransition(opacity: animation, child: child),
                           );
                         },
@@ -144,13 +160,13 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
                                     height: 24,
                                     width: 24,
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.06),
+                                      color: tokens.surfaceAlt,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.drag_indicator,
                                       size: 14,
-                                      color: Colors.white70,
+                                      color: tokens.textSecondary,
                                     ),
                                   ),
                                 ),
@@ -202,43 +218,48 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
   // Resolve a cor do badge de cada indicador.
   Color _resolveColor(MenuItemConfig item) {
     if (item.kind == MenuItemKind.custom) {
-      return const Color(0xFF254A6A);
+      return AppThemeTokens.of(context).metricFallback;
     }
 
+    final tokens = AppThemeTokens.of(context);
     final settings = AppSettingsScope.of(context);
     switch (item.metric) {
       case MenuMetric.receitas:
         return settings.colorForMetric(
           menuMetricKey(MenuMetric.receitas),
-          const Color(0xFF1FAF86),
+          tokens.metricColor(MetricColorRole.receitas),
         );
       case MenuMetric.despesas:
         return settings.colorForMetric(
           menuMetricKey(MenuMetric.despesas),
-          const Color(0xFF2A2D3C),
+          tokens.metricColor(MetricColorRole.despesas),
         );
       case MenuMetric.saldoMensal:
         return settings.colorForMetric(
           menuMetricKey(MenuMetric.saldoMensal),
-          widget.saldoMensal >= 0 ? const Color(0xFF1C8EC9) : const Color(0xFFE19932),
+          widget.saldoMensal >= 0
+              ? tokens.metricColor(MetricColorRole.saldoMensalPositivo)
+              : tokens.metricColor(MetricColorRole.saldoMensalNegativo),
         );
       case MenuMetric.saldoAposReserva:
         return settings.colorForMetric(
           menuMetricKey(MenuMetric.saldoAposReserva),
-          widget.saldoAposReserva >= 0 ? const Color(0xFF1D9C7C) : const Color(0xFFE36A4F),
+          widget.saldoAposReserva >= 0
+              ? tokens.metricColor(MetricColorRole.saldoAposReservaPositivo)
+              : tokens.metricColor(MetricColorRole.saldoAposReservaNegativo),
         );
       case MenuMetric.saldoAtual:
         return settings.colorForMetric(
           menuMetricKey(MenuMetric.saldoAtual),
-          const Color(0xFF1C7C9C),
+          tokens.metricColor(MetricColorRole.saldoAtual),
         );
       case MenuMetric.segurancaAno:
         return settings.colorForMetric(
           menuMetricKey(MenuMetric.segurancaAno),
-          const Color(0xFF3D5BA9),
+          tokens.metricColor(MetricColorRole.segurancaAno),
         );
       case null:
-        return const Color(0xFF254A6A);
+        return tokens.metricFallback;
     }
   }
 
@@ -454,17 +475,21 @@ class _MenuItemRow extends StatelessWidget {
   @override
   // Monta a UI de cada item do resumo.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: AppLayout.spaceSm),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppLayout.radiusLgTight),
         child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppLayout.spaceMd,
+            vertical: AppLayout.spaceMd,
+          ),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            color: Colors.white.withValues(alpha: 0.04),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            borderRadius: BorderRadius.circular(AppLayout.radiusLgTight),
+            color: tokens.surfaceAlt,
+            border: Border.all(color: tokens.border),
           ),
           child: Row(
             children: [
@@ -473,10 +498,10 @@ class _MenuItemRow extends StatelessWidget {
                 height: 36,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppLayout.radiusSm),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: AppLayout.spaceMd),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -485,13 +510,13 @@ class _MenuItemRow extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: tokens.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppLayout.spaceXs),
                     Text(
                       value,
                       maxLines: 1,
@@ -499,24 +524,24 @@ class _MenuItemRow extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white.withValues(alpha: 0.85),
+                        color: tokens.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppLayout.spaceSm),
               dragHandle,
-              const SizedBox(width: 8),
+              const SizedBox(width: AppLayout.spaceSm),
               InkWell(
                 onTap: onRemove,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(AppLayout.radiusMdTight),
                 child: Padding(
-                  padding: const EdgeInsets.all(4),
+                  padding: const EdgeInsets.all(AppLayout.spaceXs),
                   child: Icon(
                     Icons.close,
-                    size: 16,
-                    color: Colors.white.withValues(alpha: 0.7),
+                    size: AppLayout.iconSm,
+                    color: tokens.textMuted,
                   ),
                 ),
               ),
@@ -537,26 +562,30 @@ class _AddCard extends StatelessWidget {
   @override
   // Monta o botao de adicionar item.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(AppLayout.radiusLgTight),
       child: Ink(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppLayout.spaceMd,
+          vertical: AppLayout.spaceMd,
+        ),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-          color: Colors.white.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(AppLayout.radiusLgTight),
+          border: Border.all(color: tokens.borderStrong),
+          color: tokens.surfaceAlt,
         ),
         child: Row(
           children: [
-            const Icon(Icons.add_circle, size: 22, color: Colors.white),
-            const SizedBox(width: 10),
+            Icon(Icons.add_circle, size: AppLayout.iconLg, color: tokens.textPrimary),
+            const SizedBox(width: AppLayout.spaceMd),
             Text(
               'Adicionar item',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Colors.white.withValues(alpha: 0.9),
+                color: tokens.textPrimary,
               ),
             ),
           ],

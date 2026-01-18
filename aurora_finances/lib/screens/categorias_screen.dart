@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/categories_store.dart';
 import '../widgets/aurora_scaffold.dart';
+import '../theme/app_tokens.dart';
 
 // Tela de gerenciamento de categorias.
 class CategoriasScreen extends StatefulWidget {
@@ -57,25 +58,26 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
             separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final category = categories[index];
+              final tokens = AppThemeTokens.of(context);
               return Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.06),
+                  color: tokens.surfaceAlt,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                  border: Border.all(color: tokens.border),
                 ),
                 child: ListTile(
-                  title: Text(category, style: const TextStyle(color: Colors.white)),
+                  title: Text(category, style: TextStyle(color: tokens.textPrimary)),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
                         onPressed: () => _showCategoryDialog(category: category),
-                        icon: const Icon(Icons.edit, color: Colors.white70),
+                        icon: Icon(Icons.edit, color: tokens.textSecondary),
                         tooltip: 'Editar',
                       ),
                       IconButton(
                         onPressed: () => _removeCategory(category),
-                        icon: const Icon(Icons.delete_outline, color: Colors.white70),
+                        icon: Icon(Icons.delete_outline, color: tokens.textSecondary),
                         tooltip: 'Remover',
                       ),
                     ],
@@ -136,38 +138,36 @@ class _CategoryDialog extends StatelessWidget {
   @override
   // Monta o conteudo do dialogo.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     final inputDecoration = InputDecoration(
       filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.06),
-      labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
+      fillColor: tokens.surfaceAlt,
+      labelStyle: TextStyle(color: tokens.textSecondary),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+        borderSide: BorderSide(color: tokens.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF7FD7FF), width: 1.4),
+        borderSide: BorderSide(color: tokens.focus, width: 1.4),
       ),
     );
 
     return Dialog(
-      backgroundColor: Colors.transparent,
+      backgroundColor: tokens.background.withValues(alpha: 0.0),
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF101B24),
-              Color(0xFF183446),
-            ],
+            colors: tokens.panelGradient,
           ),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          border: Border.all(color: tokens.border),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.45),
+              color: tokens.shadow,
               blurRadius: 20,
               offset: const Offset(0, 12),
             ),
@@ -183,25 +183,25 @@ class _CategoryDialog extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.08),
+                      color: tokens.surfaceAlt,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.category, color: Color(0xFF7FD7FF)),
+                    child: Icon(Icons.category, color: tokens.accent),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                        color: tokens.textPrimary,
                       ),
                     ),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close, color: Colors.white70),
+                    icon: Icon(Icons.close, color: tokens.textSecondary),
                   ),
                 ],
               ),
@@ -209,7 +209,7 @@ class _CategoryDialog extends StatelessWidget {
               TextField(
                 controller: initialValue,
                 textCapitalization: TextCapitalization.words,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: tokens.textPrimary),
                 decoration: inputDecoration.copyWith(labelText: 'Categoria'),
               ),
               const SizedBox(height: 16),
@@ -219,8 +219,8 @@ class _CategoryDialog extends StatelessWidget {
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white70,
-                        side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                        foregroundColor: tokens.textSecondary,
+                        side: BorderSide(color: tokens.border),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -240,8 +240,8 @@ class _CategoryDialog extends StatelessWidget {
                         Navigator.pop(context);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF3C8FD9),
-                        foregroundColor: Colors.white,
+                        backgroundColor: tokens.accent,
+                        foregroundColor: tokens.textPrimary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -269,23 +269,24 @@ class _EmptyCategories extends StatelessWidget {
   @override
   // Monta o estado vazio com CTA.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return Center(
       child: Container(
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.06),
+          color: tokens.surfaceAlt,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          border: Border.all(color: tokens.border),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.category, color: Colors.white70, size: 32),
+            Icon(Icons.category, color: tokens.textSecondary, size: 32),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Nenhuma categoria cadastrada.',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: tokens.textPrimary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),

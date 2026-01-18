@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../widgets/aurora_scaffold.dart';
+import '../theme/app_tokens.dart';
 
 // Tela de login e cadastro com provedores sociais.
 class AuthScreen extends StatefulWidget {
@@ -31,6 +32,7 @@ class _AuthScreenState extends State<AuthScreen> {
   // Monta UI de login/cadastro.
   @override
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return AuroraScaffold(
       body: Center(
         child: SingleChildScrollView(
@@ -40,18 +42,18 @@ class _AuthScreenState extends State<AuthScreen> {
             child: Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
+                color: tokens.surfaceAlt,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                border: Border.all(color: tokens.border),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
+                  Text(
                     'Aurora Finances',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white,
+                      color: tokens.textPrimary,
                       fontWeight: FontWeight.w700,
                       fontSize: 20,
                     ),
@@ -60,7 +62,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   Text(
                     _isLogin ? 'Entre com sua conta' : 'Crie sua conta',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+                    style: TextStyle(color: tokens.textSecondary),
                   ),
                   const SizedBox(height: 20),
                   TextField(
@@ -80,7 +82,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   if (_error != null)
                     Text(
                       _error!,
-                      style: const TextStyle(color: Colors.redAccent),
+                      style: TextStyle(color: tokens.danger),
                       textAlign: TextAlign.center,
                     ),
                   if (_error != null) const SizedBox(height: 12),
@@ -104,7 +106,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Divider(color: Colors.white24),
+                  Divider(color: tokens.border),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: _isBusy ? null : _handleGoogleSignIn,
@@ -128,17 +130,18 @@ class _AuthScreenState extends State<AuthScreen> {
 
   // Estilo padrao dos inputs.
   InputDecoration _inputDecoration(String label) {
+    final tokens = AppThemeTokens.of(context);
     return InputDecoration(
       labelText: label,
-      labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+      labelStyle: TextStyle(color: tokens.textSecondary),
       filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.05),
+      fillColor: tokens.surfaceAlt,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+        borderSide: BorderSide(color: tokens.border),
       ),
     );
   }

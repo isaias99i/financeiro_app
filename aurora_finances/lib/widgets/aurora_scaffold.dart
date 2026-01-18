@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'aurora_background.dart';
+import '../theme/app_tokens.dart';
 
 // Scaffold padrao com fundo Aurora e padding correto.
 class AuroraScaffold extends StatelessWidget {
@@ -23,9 +24,10 @@ class AuroraScaffold extends StatelessWidget {
     final mediaPadding = MediaQuery.of(context).padding;
     final topInset =
         (appBar?.preferredSize.height ?? 0.0) + mediaPadding.top;
+    final tokens = AppThemeTokens.of(context);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: tokens.background.withValues(alpha: 0.0),
       extendBodyBehindAppBar: true,
       appBar: appBar,
       body: Stack(

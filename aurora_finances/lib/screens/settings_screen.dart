@@ -14,7 +14,9 @@ import '../screens/formatting_screen.dart';
 import '../screens/typography_screen.dart';
 import '../widgets/aurora_scaffold.dart';
 import '../widgets/app_settings_scope.dart';
+import '../theme/app_tokens.dart';
 
+// Tela principal de configuracoes do app.
 class SettingsScreen extends StatefulWidget {
   final CategoriesStore categoriesStore;
   final ReceitasStore receitasStore;
@@ -34,11 +36,13 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
+// Estado da tela de configuracoes com secoes.
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _isBusy = false;
 
   // Monta a UI principal das configuracoes.
   @override
+  // Monta a lista de secoes de configuracao.
   Widget build(BuildContext context) {
     return AuroraScaffold(
       appBar: AppBar(
@@ -77,6 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // Monta a secao de despesas e categorias.
   Widget _buildDespesasSection(int categoriesCount) {
     // Secao com itens de despesas e categorias.
     return _SettingsSection(
@@ -113,14 +118,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // Monta a secao de tema e tipografia.
   Widget _buildAppearanceSection() {
     // Secao de aparencia e tipografia.
     return _SettingsSection(
       title: 'Aparencia',
       children: [
         _SettingsItem(
-          title: 'Tema e contraste',
-          subtitle: 'Ajustes visuais do app',
+          title: 'Tema',
+          subtitle: 'Escolha o tema Aurora',
           icon: Icons.auto_awesome,
           onTap: () {
             Navigator.push(
@@ -148,6 +154,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // Monta a secao de formatos e moeda.
   Widget _buildFormattingSection() {
     // Secao de moeda e formato de data.
     return _SettingsSection(
@@ -183,6 +190,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // Monta a secao de dados e backup.
   Widget _buildDataSection() {
     // Secao de dados (importacao e recursos futuros).
     return _SettingsSection(
@@ -220,6 +228,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // Monta a secao de conta e autenticacao.
   Widget _buildAccountSection() {
     // Secao de conta e gerenciamento de dados.
     return _SettingsSection(
@@ -320,6 +329,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // Exibe snackbar com feedback rapido.
   void _showMessage(String message) {
     // Feedback rapido para o usuario.
     ScaffoldMessenger.of(context).showSnackBar(
@@ -328,6 +338,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
+// Cabecalho de destaque da tela de configuracoes.
 class _SettingsHero extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -339,30 +350,29 @@ class _SettingsHero extends StatelessWidget {
   });
 
   @override
+  // Monta o cabecalho com titulo e subtitulo.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF1C8EC9).withValues(alpha: 0.3),
-            const Color(0xFF1FAF86).withValues(alpha: 0.2),
-          ],
+          colors: tokens.heroGradient,
         ),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(color: tokens.border),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: tokens.surfaceAlt,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.settings, color: Colors.white),
+            child: Icon(Icons.settings, color: tokens.textPrimary),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -371,8 +381,8 @@ class _SettingsHero extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: tokens.textPrimary,
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                   ),
@@ -380,7 +390,7 @@ class _SettingsHero extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+                  style: TextStyle(color: tokens.textSecondary),
                 ),
               ],
             ),
@@ -391,6 +401,7 @@ class _SettingsHero extends StatelessWidget {
   }
 }
 
+// Card base para cada secao de configuracao.
 class _SettingsSection extends StatelessWidget {
   final String title;
   final List<Widget> children;
@@ -402,13 +413,15 @@ class _SettingsSection extends StatelessWidget {
   });
 
   @override
+  // Monta a estrutura visual da secao.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: tokens.surfaceAlt,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: tokens.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -416,7 +429,7 @@ class _SettingsSection extends StatelessWidget {
           Text(
             title,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.9),
+              color: tokens.textPrimary,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -428,6 +441,7 @@ class _SettingsSection extends StatelessWidget {
   }
 }
 
+// Item de acao dentro da secao.
 class _SettingsItem extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -448,46 +462,48 @@ class _SettingsItem extends StatelessWidget {
   });
 
   @override
+  // Monta o item de lista clicavel.
   Widget build(BuildContext context) {
     // Item clicavel padrao das configuracoes.
+    final tokens = AppThemeTokens.of(context);
     final content = ListTile(
       leading: Container(
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.08),
+          color: tokens.surfaceAlt,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(
           icon,
-          color: isDestructive ? const Color(0xFFE36A4F) : Colors.white70,
+          color: isDestructive ? tokens.danger : tokens.textSecondary,
           size: 20,
         ),
       ),
       title: Text(
         title,
         style: TextStyle(
-          color: isDestructive ? const Color(0xFFE36A4F) : Colors.white,
+          color: isDestructive ? tokens.danger : tokens.textPrimary,
           fontWeight: FontWeight.w600,
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(color: Colors.white.withValues(alpha: 0.65)),
+        style: TextStyle(color: tokens.textMuted),
       ),
       trailing: badge != null
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
+                color: tokens.surfaceAlt,
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
                 badge!,
-                style: const TextStyle(color: Colors.white, fontSize: 12),
+                style: TextStyle(color: tokens.textPrimary, fontSize: 12),
               ),
             )
-          : Icon(Icons.chevron_right, color: Colors.white.withValues(alpha: 0.7)),
+          : Icon(Icons.chevron_right, color: tokens.textMuted),
     );
 
     if (isDisabled) {

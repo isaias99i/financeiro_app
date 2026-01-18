@@ -7,6 +7,8 @@ import '../data/carteira_store.dart';
 import '../models/carteira_models.dart';
 import '../utils/currency_input_formatter.dart';
 import '../widgets/app_settings_scope.dart';
+import '../theme/app_layout.dart';
+import '../theme/app_tokens.dart';
 
 // Widget da carteira com lista de bancos e saldo total.
 class CarteiraWidget extends StatefulWidget {
@@ -30,23 +32,15 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
   final Set<String> _editingIds = {};
   final Map<String, TextEditingController> _nameControllers = {};
   final Map<String, TextEditingController> _balanceControllers = {};
-  final List<Color> _colorOptions = const [
-    Color(0xFF1C8EC9),
-    Color(0xFF1FAF86),
-    Color(0xFFE19932),
-    Color(0xFFE36A4F),
-    Color(0xFF3D5BA9),
-    Color(0xFF254A6A),
-    Color(0xFF8E44AD),
-    Color(0xFF2ECC71),
-  ];
+  List<Color> _colorOptions(AppThemeTokens tokens) => tokens.metricPaletteColors;
 
   // Monta a UI da carteira com grafico e lista.
   @override
   Widget build(BuildContext context) {
     final format = AppSettingsScope.of(context).currencyFormatter();
+    final tokens = AppThemeTokens.of(context);
     final total = widget.store.totalBalance;
-    final status = _buildStatus(total, widget.expectedBalance, format);
+    final status = _buildStatus(total, widget.expectedBalance, format, tokens);
     final banks = _sortedBanks(widget.store.banks);
 
     return Column(
@@ -54,24 +48,32 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
       children: [
         Row(
           children: [
-            const Text(
+            Text(
               'Carteira',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: tokens.textPrimary,
+              ),
             ),
             const Spacer(),
             Text(
               format.format(total),
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: tokens.textPrimary,
+              ),
             ),
           ],
         ),
         const SizedBox(height: 4),
         Text(
           'Saldo atual do mes',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
+          style: TextStyle(color: tokens.textSecondary, fontSize: 12),
         ),
         if (status != null) ...[
-          const SizedBox(height: 6),
+          const SizedBox(height: AppLayout.spaceSm),
           Row(
             children: [
               Container(
@@ -82,7 +84,7 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
                   shape: BoxShape.circle,
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: AppLayout.spaceSm),
               Text(
                 status.label,
                 style: TextStyle(color: status.color, fontSize: 12, fontWeight: FontWeight.w600),
@@ -91,13 +93,13 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
           ),
         ],
         if (banks.isNotEmpty && total > 0) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: AppLayout.spaceMd),
           _PieCard(banks: banks, total: total, formatter: format),
         ],
-        const SizedBox(height: 10),
+        const SizedBox(height: AppLayout.spaceMd),
         ExpansionPanelList(
           elevation: 0,
-          dividerColor: Colors.white.withValues(alpha: 0.1),
+          dividerColor: tokens.border,
           expandedHeaderPadding: EdgeInsets.zero,
           expansionCallback: (int index, bool isExpanded) {
             setState(() {
@@ -106,21 +108,24 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
           },
           children: [
             ExpansionPanel(
-              backgroundColor: Colors.white.withValues(alpha: 0.05),
+              backgroundColor: tokens.surfaceAlt,
               isExpanded: _isExpanded,
               headerBuilder: (BuildContext context, bool isExpanded) {
                 return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  title: const Text(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppLayout.spaceLg,
+                    vertical: AppLayout.spaceXs,
+                  ),
+                  title: Text(
                     'Bancos',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+                    style: TextStyle(fontWeight: FontWeight.w600, color: tokens.textPrimary),
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       PopupMenuButton<_SortMode>(
                         onSelected: (mode) => setState(() => _sortMode = mode),
-                        icon: const Icon(Icons.sort, color: Colors.white),
+                        icon: Icon(Icons.sort, color: tokens.textPrimary),
                         itemBuilder: (context) => const [
                           PopupMenuItem(
                             value: _SortMode.balanceDesc,
@@ -138,14 +143,19 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
                       ),
                       IconButton(
                         onPressed: _showAddBankDialog,
-                        icon: const Icon(Icons.add_circle, color: Colors.white),
+                        icon: Icon(Icons.add_circle, color: tokens.textPrimary),
                       ),
                     ],
                   ),
                 );
               },
               body: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                padding: const EdgeInsets.fromLTRB(
+                  AppLayout.spaceMd,
+                  0,
+                  AppLayout.spaceMd,
+                  AppLayout.spaceMd,
+                ),
                 child: Column(
                   children: [
                     for (final bank in banks)
@@ -160,7 +170,7 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
                         onCancel: () => _cancelInlineEdit(bank),
                         onRemove: () => widget.store.removeBank(bank.id),
                       ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppLayout.spaceSm),
                     _AddBankCard(onTap: _showAddBankDialog),
                   ],
                 ),
@@ -177,6 +187,7 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
     double total,
     double? expected,
     NumberFormat formatter,
+    AppThemeTokens tokens,
   ) {
     if (expected == null) {
       return null;
@@ -186,18 +197,18 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
     if (diff.abs() < 0.01) {
       return _StatusInfo(
         label: 'Dentro do esperado ($expectedLabel)',
-        color: const Color(0xFF1FAF86),
+        color: tokens.success,
       );
     }
     if (diff > 0) {
       return _StatusInfo(
         label: 'Acima do esperado ($expectedLabel)',
-        color: const Color(0xFFE36A4F),
+        color: tokens.danger,
       );
     }
     return _StatusInfo(
       label: 'Abaixo do esperado ($expectedLabel)',
-      color: const Color(0xFF1C8EC9),
+      color: tokens.primary,
     );
   }
 
@@ -290,12 +301,13 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
 
   // Mostra mensagem rapida.
   void _showSnack(BuildContext context, String message) {
+    final tokens = AppThemeTokens.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         duration: const Duration(milliseconds: 1600),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.white.withValues(alpha: 0.12),
+        backgroundColor: tokens.surfaceStrong,
       ),
     );
   }
@@ -307,8 +319,10 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
     final balanceController = TextEditingController(
       text: existing != null ? existing.balance.toStringAsFixed(2) : '',
     );
-    Color selectedColor =
-        existing != null ? Color(existing.colorValue) : _colorOptions.first;
+    final tokens = AppThemeTokens.of(context);
+    Color selectedColor = existing != null
+        ? Color(existing.colorValue)
+        : _colorOptions(tokens).first;
 
     showDialog(
       context: context,
@@ -344,7 +358,7 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
                         'Cor',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: Colors.black.withValues(alpha: 0.7),
+                          color: tokens.textSecondary,
                         ),
                       ),
                     ),
@@ -352,7 +366,7 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: _colorOptions.map((color) {
+                      children: _colorOptions(tokens).map((color) {
                         final isSelected =
                             color.toARGB32() == selectedColor.toARGB32();
                         return InkWell(
@@ -365,7 +379,9 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
                               color: color,
                               shape: BoxShape.circle,
                               border: Border.all(
-                        color: isSelected ? Colors.black87 : Colors.transparent,
+                        color: isSelected
+                            ? tokens.textPrimary
+                            : tokens.background.withValues(alpha: 0.0),
                                 width: 2,
                               ),
                             ),
@@ -450,18 +466,19 @@ class _BankCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final format = AppSettingsScope.of(context).currencyFormatter();
+    final tokens = AppThemeTokens.of(context);
     final ratio = totalBalance <= 0 ? 0.0 : (bank.balance / totalBalance).clamp(0.0, 1.0);
     final percent = (ratio * 100).toStringAsFixed(0);
 
     return Card(
       elevation: 0,
-      color: Colors.white.withValues(alpha: 0.08),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: tokens.surfaceAlt,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusMd)),
       child: InkWell(
         onTap: isEditing ? null : onEdit,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppLayout.radiusMd),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(AppLayout.spaceMd),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -470,10 +487,10 @@ class _BankCard extends StatelessWidget {
                 height: 36,
                 decoration: BoxDecoration(
                   color: Color(bank.colorValue),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(AppLayout.radiusSm),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppLayout.spaceMd),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -482,15 +499,15 @@ class _BankCard extends StatelessWidget {
                       TextField(
                         controller: nameController,
                         maxLines: 1,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           isDense: true,
                           border: InputBorder.none,
                           hintText: 'Nome do banco',
-                          hintStyle: TextStyle(color: Colors.white54),
+                          hintStyle: TextStyle(color: tokens.textMuted),
                           contentPadding: EdgeInsets.zero,
                         ),
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: tokens.textPrimary,
                           fontWeight: FontWeight.w600,
                         ),
                       )
@@ -499,9 +516,9 @@ class _BankCard extends StatelessWidget {
                         bank.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: tokens.textPrimary),
                       ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppLayout.spaceXs),
                     if (isEditing)
                       TextField(
                         controller: balanceController,
@@ -513,58 +530,58 @@ class _BankCard extends StatelessWidget {
                           ),
                         ],
                         maxLines: 1,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           isDense: true,
                           border: InputBorder.none,
                           hintText: 'Saldo',
-                          hintStyle: TextStyle(color: Colors.white54),
+                          hintStyle: TextStyle(color: tokens.textMuted),
                           contentPadding: EdgeInsets.zero,
                         ),
-                        style: const TextStyle(color: Colors.white70),
+                        style: TextStyle(color: tokens.textSecondary),
                       )
                     else
                       Text(
                         format.format(bank.balance),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+                        style: TextStyle(color: tokens.textSecondary),
                       ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppLayout.spaceSm),
                     LinearProgressIndicator(
                       value: ratio,
                       minHeight: 6,
-                      backgroundColor: Colors.white.withValues(alpha: 0.1),
+                      backgroundColor: tokens.surfaceStrong,
                       valueColor: AlwaysStoppedAnimation<Color>(Color(bank.colorValue)),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppLayout.spaceXs),
                     Text(
                       '$percent% do total',
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
+                      style: TextStyle(color: tokens.textMuted, fontSize: 11),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppLayout.spaceSm),
               SizedBox(
                 width: 40,
-                child: isEditing
-                    ? Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            onPressed: onSave,
-                            icon: const Icon(Icons.check, color: Colors.white70),
-                          ),
-                          IconButton(
-                            onPressed: onCancel,
-                            icon: const Icon(Icons.close, color: Colors.white70),
-                          ),
-                        ],
-                      )
-                    : IconButton(
-                        onPressed: onRemove,
-                        icon: const Icon(Icons.delete_outline, color: Colors.white70),
-                      ),
+                  child: isEditing
+                      ? Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              onPressed: onSave,
+                              icon: Icon(Icons.check, color: tokens.textSecondary),
+                            ),
+                            IconButton(
+                              onPressed: onCancel,
+                              icon: Icon(Icons.close, color: tokens.textSecondary),
+                            ),
+                          ],
+                        )
+                      : IconButton(
+                          onPressed: onRemove,
+                          icon: Icon(Icons.delete_outline, color: tokens.textSecondary),
+                        ),
               ),
             ],
           ),
@@ -583,23 +600,24 @@ class _AddBankCard extends StatelessWidget {
   // Renderiza o botao de adicionar.
   @override
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppLayout.radiusMd),
       child: Ink(
-        height: 54,
+        height: AppLayout.controlHeight,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-          color: Colors.white.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(AppLayout.radiusMd),
+          border: Border.all(color: tokens.borderStrong),
+          color: tokens.surfaceAlt,
         ),
-        child: const Center(
+        child: Center(
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.add, color: Colors.white70),
-              SizedBox(width: 6),
-              Text('Adicionar banco', style: TextStyle(color: Colors.white70)),
+              Icon(Icons.add, color: tokens.textSecondary),
+              const SizedBox(width: AppLayout.spaceSm),
+              Text('Adicionar banco', style: TextStyle(color: tokens.textSecondary)),
             ],
           ),
         ),
@@ -623,12 +641,13 @@ class _PieCard extends StatelessWidget {
   // Desenha o grafico de pizza.
   @override
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(AppLayout.spaceLgTight),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        color: tokens.surfaceAlt,
+        borderRadius: BorderRadius.circular(AppLayout.radiusLg),
+        border: Border.all(color: tokens.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -638,21 +657,21 @@ class _PieCard extends StatelessWidget {
               Text(
                 'Distribuicao por banco',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.9),
+                  color: tokens.textPrimary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const Spacer(),
               Text(
                 formatter.format(total),
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: tokens.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppLayout.spaceMd),
           Center(
             child: SizedBox(
               width: 160,

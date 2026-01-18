@@ -11,6 +11,7 @@ import '../utils/month_key.dart';
 import '../widgets/aurora_badge.dart';
 import '../widgets/aurora_scaffold.dart';
 import '../widgets/app_settings_scope.dart';
+import '../theme/app_tokens.dart';
 
 // Tela de despesas com grupos e colunas.
 class DespesasScreen extends StatefulWidget {
@@ -495,12 +496,13 @@ class _DespesasScreenState extends State<DespesasScreen> {
 
   // Exibe um snackbar com feedback rapido.
   void _showSnack(String message) {
+    final tokens = AppThemeTokens.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         duration: const Duration(milliseconds: 1600),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.white.withValues(alpha: 0.12),
+        backgroundColor: tokens.surfaceStrong,
       ),
     );
   }
@@ -538,23 +540,21 @@ class _MonthSelector extends StatelessWidget {
   @override
   // Monta o seletor de mes.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF1C8EC9).withValues(alpha: 0.18),
-            const Color(0xFF1FAF86).withValues(alpha: 0.12),
-          ],
+          colors: tokens.heroGradient,
         ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(color: tokens.border),
       ),
       child: Row(
         children: [
-          const Icon(Icons.calendar_today, size: 16, color: Colors.white70),
+          Icon(Icons.calendar_today, size: 16, color: tokens.textSecondary),
           const SizedBox(width: 8),
           Expanded(
             child: SizedBox(
@@ -568,8 +568,8 @@ class _MonthSelector extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       formatter.format(month),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: tokens.textPrimary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -581,13 +581,13 @@ class _MonthSelector extends StatelessWidget {
           IconButton(
             onPressed: onPrevious,
             icon: const Icon(Icons.chevron_left),
-            color: Colors.white,
+            color: tokens.textPrimary,
             tooltip: 'Mes anterior',
           ),
           IconButton(
             onPressed: onNext,
             icon: const Icon(Icons.chevron_right),
-            color: Colors.white,
+            color: tokens.textPrimary,
             tooltip: 'Proximo mes',
           ),
         ],
@@ -605,22 +605,23 @@ class _EmptyState extends StatelessWidget {
   @override
   // Monta o estado vazio com CTA.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return Center(
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.06),
+          color: tokens.surfaceAlt,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          border: Border.all(color: tokens.border),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.folder_open, color: Colors.white70, size: 32),
+            Icon(Icons.folder_open, color: tokens.textSecondary, size: 32),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Nenhum grupo criado. Crie um grupo para começar.',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: tokens.textPrimary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
@@ -651,37 +652,35 @@ class _SummaryCard extends StatelessWidget {
   @override
   // Monta o card de resumo.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF19344A).withValues(alpha: 0.55),
-            const Color(0xFF0F2C3E).withValues(alpha: 0.45),
-          ],
+          colors: tokens.panelGradient,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(color: tokens.border),
       ),
       child: Row(
         children: [
-          const Icon(Icons.payments, color: Colors.white70),
+          Icon(Icons.payments, color: tokens.textSecondary),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Total do mes',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                  style: TextStyle(color: tokens.textMuted, fontSize: 12),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   totalLabel,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: tokens.textPrimary,
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                   ),
@@ -760,6 +759,7 @@ class _GroupCard extends StatelessWidget {
   @override
   // Monta o card do grupo.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -767,12 +767,12 @@ class _GroupCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.white.withValues(alpha: 0.08),
-            Colors.white.withValues(alpha: 0.03),
+            tokens.surfaceAlt,
+            tokens.surface,
           ],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(color: tokens.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -782,8 +782,8 @@ class _GroupCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   group.title,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: tokens.textPrimary,
                     fontWeight: FontWeight.w600,
                     fontSize: 16,
                   ),
@@ -791,13 +791,13 @@ class _GroupCard extends StatelessWidget {
               ),
               Text(
                 '$columnCount colunas',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+                style: TextStyle(color: tokens.textMuted),
               ),
               const SizedBox(width: 8),
               Text(
                 totalLabel,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: tokens.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -806,27 +806,27 @@ class _GroupCard extends StatelessWidget {
                 onPressed: onAddColumn,
                 icon: const Icon(Icons.add),
                 tooltip: 'Adicionar coluna',
-                color: Colors.white70,
+                color: tokens.textSecondary,
               ),
               IconButton(
                 onPressed: onEditGroup,
                 icon: const Icon(Icons.edit),
                 tooltip: 'Editar grupo',
-                color: Colors.white70,
+                color: tokens.textSecondary,
               ),
               IconButton(
                 onPressed: onRemoveGroup,
                 icon: const Icon(Icons.delete_outline),
                 tooltip: 'Remover grupo',
-                color: Colors.white70,
+                color: tokens.textSecondary,
               ),
             ],
           ),
           const SizedBox(height: 8),
           if (group.columns.isEmpty)
-            const Text(
+            Text(
               'Sem colunas. Clique em adicionar para incluir.',
-              style: TextStyle(color: Colors.white70),
+              style: TextStyle(color: tokens.textSecondary),
             )
           else
             LayoutBuilder(
@@ -900,15 +900,16 @@ class _ColumnSummaryTile extends StatelessWidget {
   @override
   // Monta o tile de resumo da coluna.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Ink(
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.08),
+          color: tokens.surfaceAlt,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+          border: Border.all(color: tokens.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -917,8 +918,8 @@ class _ColumnSummaryTile extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white70,
+              style: TextStyle(
+                color: tokens.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -926,8 +927,8 @@ class _ColumnSummaryTile extends StatelessWidget {
             const Spacer(),
             Text(
               totalLabel,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: tokens.textPrimary,
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
               ),
@@ -937,7 +938,7 @@ class _ColumnSummaryTile extends StatelessWidget {
               children: [
                 Text(
                   countLabel,
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
+                  style: TextStyle(color: tokens.textMuted, fontSize: 11),
                 ),
                 if (badgeLabel != null) ...[
                   const SizedBox(width: 8),
@@ -976,12 +977,13 @@ class _ColumnValueTile extends StatelessWidget {
   // Monta o tile de valor fixo.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
+    final tokens = AppThemeTokens.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: tokens.surfaceAlt,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+        border: Border.all(color: tokens.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -990,8 +992,8 @@ class _ColumnValueTile extends StatelessWidget {
             title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white70,
+            style: TextStyle(
+              color: tokens.textSecondary,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -1012,12 +1014,12 @@ class _ColumnValueTile extends StatelessWidget {
                   symbol: settings.currencySymbol,
                 ),
               ],
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              decoration: const InputDecoration(
+              style: TextStyle(color: tokens.textPrimary, fontSize: 14),
+              decoration: InputDecoration(
                 border: InputBorder.none,
                 isDense: true,
                 hintText: '0,00',
-                hintStyle: TextStyle(color: Colors.white54),
+                hintStyle: TextStyle(color: tokens.textMuted),
               ),
               onChanged: (value) {
                 onChanged(value);
@@ -1050,24 +1052,25 @@ class _TotalFooter extends StatelessWidget {
   @override
   // Monta o rodape de total.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
+        color: tokens.surfaceStrong,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        border: Border.all(color: tokens.borderStrong),
       ),
       child: Row(
         children: [
-          const Text(
+          Text(
             'Total do mes',
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(color: tokens.textSecondary),
           ),
           const Spacer(),
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: tokens.textPrimary,
               fontWeight: FontWeight.w700,
               fontSize: 16,
             ),
@@ -1088,11 +1091,12 @@ class _TinyIconButton extends StatelessWidget {
   @override
   // Monta o botao compacto.
   Widget build(BuildContext context) {
+    final tokens = AppThemeTokens.of(context);
     return InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.all(4),
-        child: Icon(icon, size: 16, color: Colors.white70),
+        child: Icon(icon, size: 16, color: tokens.textSecondary),
       ),
     );
   }

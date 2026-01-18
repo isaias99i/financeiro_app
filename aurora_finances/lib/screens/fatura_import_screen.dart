@@ -16,12 +16,13 @@ import '../utils/currency_input_formatter.dart';
 import '../utils/invoice_parser.dart';
 import '../widgets/app_settings_scope.dart';
 import '../widgets/aurora_scaffold.dart';
+import '../theme/app_tokens.dart';
 
+// Tela de importacao de faturas (PDF) com OCR e revisao manual.
 class FaturaImportScreen extends StatefulWidget {
   final DespesasStore despesasStore;
   final CategoriesStore categoriesStore;
 
-  // Tela de importacao de faturas (PDF) com OCR e revisao manual.
   const FaturaImportScreen({
     super.key,
     required this.despesasStore,
@@ -32,6 +33,7 @@ class FaturaImportScreen extends StatefulWidget {
   State<FaturaImportScreen> createState() => _FaturaImportScreenState();
 }
 
+// Estado da importacao com OCR, parsing e edicao local.
 class _FaturaImportScreenState extends State<FaturaImportScreen> {
   final TextRecognizer _textRecognizer =
       TextRecognizer(script: TextRecognitionScript.latin);
@@ -64,8 +66,8 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   @override
+  // Monta a tela principal e mantem estado do filtro de cartao.
   Widget build(BuildContext context) {
-    // Monta a tela principal e mantem estado do filtro de cartao.
     final settings = AppSettingsScope.of(context);
     final categories = widget.categoriesStore.categories.toList();
     final options = _columnOptions();
@@ -91,7 +93,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
             const SizedBox(height: 12),
             Text(
               _error!,
-              style: const TextStyle(color: Colors.redAccent),
+              style: TextStyle(color: AppThemeTokens.of(context).danger),
             ),
           ],
           if (_entries.isNotEmpty) ...[
@@ -110,18 +112,22 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
     );
   }
 
+  // Renderiza titulo de secao.
   Widget _sectionTitle(String title) {
+    final tokens = AppThemeTokens.of(context);
     return Text(
       title,
-      style: const TextStyle(
-        color: Colors.white,
+      style: TextStyle(
+        color: tokens.textPrimary,
         fontWeight: FontWeight.w700,
       ),
     );
   }
 
+  // Monta a secao de selecao de cartao.
   Widget _buildCardSection(List<_ColumnOption> options) {
     // Seleciona a coluna (cartao) de destino das despesas importadas.
+    final tokens = AppThemeTokens.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -130,7 +136,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
           key: ValueKey(_selectedColumn?.column.id ?? 'none'),
           initialValue: _selectedColumn,
           decoration: _dropdownDecoration('Escolha a coluna do cartao'),
-          dropdownColor: const Color(0xFF10212C),
+          dropdownColor: tokens.surface,
           items: options
               .map(
                 (option) => DropdownMenuItem(
@@ -147,15 +153,17 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
           const SizedBox(height: 8),
           Text(
             'Crie um grupo/coluna de despesas detalhadas para importar a fatura.',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+            style: TextStyle(color: tokens.textSecondary),
           ),
         ],
       ],
     );
   }
 
+  // Monta a secao de upload e leitura do PDF.
   Widget _buildPdfSection() {
     // Area para selecionar PDF e iniciar processamento.
+    final tokens = AppThemeTokens.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -163,16 +171,16 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.16),
+            color: tokens.surfaceAlt,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+            border: Border.all(color: tokens.border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Dica: PDFs com texto selecionavel costumam dar resultado melhor.',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: tokens.textPrimary),
               ),
               const SizedBox(height: 8),
               FilledButton.icon(
@@ -187,45 +195,50 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
     );
   }
 
+  // Decoracao padrao para campos simples.
   InputDecoration _fieldDecoration(String label) {
     // Estilo padrao para campos de texto editaveis.
+    final tokens = AppThemeTokens.of(context);
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: Colors.white),
+      labelStyle: TextStyle(color: tokens.textPrimary),
       floatingLabelBehavior: FloatingLabelBehavior.always,
       alignLabelWithHint: true,
       filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.16),
+      fillColor: tokens.surfaceAlt,
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.35)),
+        borderSide: BorderSide(color: tokens.border),
       ),
     );
   }
 
+  // Decoracao padrao para dropdowns.
   InputDecoration _dropdownDecoration(String label) {
     // Estilo padrao para dropdowns com label fixo.
+    final tokens = AppThemeTokens.of(context);
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: Colors.white),
+      labelStyle: TextStyle(color: tokens.textPrimary),
       floatingLabelBehavior: FloatingLabelBehavior.always,
       filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.16),
+      fillColor: tokens.surfaceAlt,
       contentPadding: const EdgeInsets.fromLTRB(12, 18, 12, 8),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.35)),
+        borderSide: BorderSide(color: tokens.border),
       ),
     );
   }
 
+  // Monta opcoes de colunas (cartoes).
   List<_ColumnOption> _columnOptions() {
     // Lista apenas colunas que aceitam lancamentos detalhados.
     final options = <_ColumnOption>[];
@@ -316,6 +329,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
     }
   }
 
+  // Extrai texto do PDF com fallback de OCR.
   String? _extractPdfText(String pdfPath, String? password) {
     // Extrai texto diretamente do PDF (quando ha texto selecionavel).
     try {
@@ -425,6 +439,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
     return result;
   }
 
+  // Monta a lista de lancamentos extraidos.
   Widget _buildEntriesList(AppSettingsStore settings, List<String> categories) {
     // Lista de lancamentos detectados para edicao manual.
     if (_entries.isEmpty) {
@@ -490,6 +505,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
     setState(() => entry.date = picked);
   }
 
+  // Remove um lancamento da lista.
   void _removeEntry(int index) {
     // Remove um draft da lista.
     setState(() {
@@ -534,6 +550,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
     }
   }
 
+  // Gera lancamentos parcelados a partir de uma compra.
   void _addInstallments(_DraftEntry entry, String columnId) {
     // Gera parcelas futuras quando o item eh parcelado.
     final count = entry.installmentCount;
@@ -555,6 +572,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
     }
   }
 
+  // Calcula a data da parcela conforme a compra.
   DateTime _installmentDate(DateTime purchaseDate, int installmentIndex) {
     // Calcula a data de cada parcela usando o dia mais seguro do mes.
     final targetMonth = DateTime(
@@ -567,6 +585,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
     return DateTime(targetMonth.year, targetMonth.month, safeDay);
   }
 
+  // Exibe mensagem rapida para o usuario.
   void _showSnack(String message) {
     // Feedback rapido na tela.
     ScaffoldMessenger.of(context).showSnackBar(
@@ -575,6 +594,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 }
 
+// Modelo temporario de lancamento importado.
 class _DraftEntry {
   DateTime date;
   String category;
@@ -628,6 +648,7 @@ class _DraftEntry {
     );
   }
 
+  // Sincroniza controllers com os valores atuais.
   void syncControllers(AppSettingsStore settings) {
     // Sincroniza valores editados no formulario.
     reason = reasonController.text.trim();
@@ -641,6 +662,7 @@ class _DraftEntry {
     }
   }
 
+  // Libera os controllers do draft.
   void dispose() {
     // Libera controladores de texto.
     reasonController.dispose();
@@ -650,6 +672,7 @@ class _DraftEntry {
   }
 }
 
+// Opcao de coluna/cartao disponivel.
 class _ColumnOption {
   final ExpenseGroup group;
   final ExpenseColumn column;
@@ -669,6 +692,7 @@ class _ColumnOption {
   int get hashCode => Object.hash(group.id, column.id);
 }
 
+// Card de edicao de um lancamento importado.
 class _EntryCard extends StatelessWidget {
   final _DraftEntry entry;
   final List<String> categories;
@@ -699,9 +723,11 @@ class _EntryCard extends StatelessWidget {
   });
 
   @override
+  // Monta o card do lancamento.
   Widget build(BuildContext context) {
     // Card visual para revisar e editar cada lancamento.
     final moneyFormatter = settings.currencyFormatter();
+    final tokens = AppThemeTokens.of(context);
     final categoryList = categories.isEmpty ? ['Outros'] : categories.toList();
     if (entry.category.isNotEmpty && !categoryList.contains(entry.category)) {
       categoryList.insert(0, entry.category);
@@ -710,9 +736,9 @@ class _EntryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
+        color: tokens.surfaceAlt,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+        border: Border.all(color: tokens.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -725,14 +751,14 @@ class _EntryCard extends StatelessWidget {
                   initialValue:
                       entry.category.isNotEmpty ? entry.category : categoryList.first,
                   decoration: dropdownDecoration('Categoria'),
-                  dropdownColor: const Color(0xFF10212C),
+                  dropdownColor: tokens.surface,
                   items: categoryList
                       .map(
                         (category) => DropdownMenuItem(
                           value: category,
                           child: Text(
                             category,
-                            style: const TextStyle(color: Colors.white),
+                            style: TextStyle(color: tokens.textPrimary),
                           ),
                         ),
                       )
@@ -745,7 +771,7 @@ class _EntryCard extends StatelessWidget {
               ),
               IconButton(
                 onPressed: onRemove,
-                icon: const Icon(Icons.delete_outline, color: Colors.white70),
+                icon: Icon(Icons.delete_outline, color: tokens.textSecondary),
               ),
             ],
           ),
@@ -753,7 +779,7 @@ class _EntryCard extends StatelessWidget {
           TextField(
             controller: entry.reasonController,
             decoration: fieldDecoration('Descricao'),
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: tokens.textPrimary),
           ),
           const SizedBox(height: 8),
           TextField(
@@ -766,7 +792,7 @@ class _EntryCard extends StatelessWidget {
               ),
             ],
             decoration: fieldDecoration('Valor'),
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: tokens.textPrimary),
             onChanged: onAmountChanged,
           ),
           const SizedBox(height: 8),
@@ -775,7 +801,7 @@ class _EntryCard extends StatelessWidget {
             icon: const Icon(Icons.calendar_today),
             label: Text(
               settings.dateFormatter().format(entry.date),
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: tokens.textPrimary),
             ),
           ),
           SwitchListTile(
@@ -793,7 +819,7 @@ class _EntryCard extends StatelessWidget {
                     controller: entry.installmentCountController,
                     keyboardType: TextInputType.number,
                     decoration: fieldDecoration('Parcelas'),
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: tokens.textPrimary),
                     onChanged: onInstallmentCountChanged,
                   ),
                 ),
@@ -803,7 +829,7 @@ class _EntryCard extends StatelessWidget {
                     controller: entry.installmentIndexController,
                     keyboardType: TextInputType.number,
                     decoration: fieldDecoration('Parcela atual'),
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: tokens.textPrimary),
                     onChanged: onInstallmentIndexChanged,
                   ),
                 ),
@@ -814,7 +840,7 @@ class _EntryCard extends StatelessWidget {
           Text(
             moneyFormatter.format(entry.amountValue),
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.7),
+              color: tokens.textSecondary,
               fontSize: 12,
             ),
           ),
