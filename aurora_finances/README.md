@@ -7,6 +7,7 @@ App Flutter para controle financeiro pessoal com autenticacao (Email/Senha, Goog
 - Login social com Google e Microsoft
 - Dashboard com resumo de receitas, despesas, saldo e previsoes
 - Cadastro de receitas e despesas
+- Importacao de fatura (PDF) com OCR e sugestao de lancamentos
 - Carteira/contas bancarias e categorias personalizadas
 - Preferencias de tema, moeda e formato de data por usuario
 
@@ -15,6 +16,7 @@ App Flutter para controle financeiro pessoal com autenticacao (Email/Senha, Goog
 - Android Studio ou JDK instalado (para build Android)
 - Conta no Firebase
 - (Opcional) Conta Microsoft Azure para login Microsoft
+- Dispositivo/emulador Android com Google Play Services
 
 ## Configuracao do Flutter
 1) Instale o Flutter: https://docs.flutter.dev/get-started/install
@@ -66,6 +68,10 @@ No Firebase Console -> Authentication -> Sign-in method:
 3) Crie `Client Secret` em Certificates & secrets
 4) Cole Client ID e Secret no Firebase (Auth -> Microsoft)
 
+## Google Sign-In (Android)
+- Confirme o SHA-1 do debug e do release no Firebase.
+- Baixe novamente o `google-services.json` apos adicionar o SHA-1.
+
 ## Firestore
 1) Firebase Console -> Firestore Database -> Create database
 2) Regras (production):
@@ -101,6 +107,11 @@ flutter run
 flutter build apk
 ```
 
+## Fluxo de dados
+- Auth cria o usuario e o app grava dados em `users/{uid}/...`.
+- Cada usuario acessa apenas seus documentos via Rules.
+- Configuracoes de tema, moeda e rotulos ficam em `settings`.
+
 ## Estrutura dos dados (Firestore)
 ```
 users/{uid}/settings/data
@@ -109,6 +120,19 @@ users/{uid}/despesas/data
 users/{uid}/carteira/data
 users/{uid}/categories/data
 ```
+
+## Importacao de fatura (PDF)
+- A importacao usa OCR local (ML Kit) e parsing do texto.
+- PDFs com senha sao suportados (sera solicitada na tela).
+- Faturas variam muito: revise os lancamentos sugeridos antes de salvar.
+
+## Remocao de dados
+- Em Configuracoes: apagar dados do usuario ou excluir a conta.
+- Excluir conta remove os dados do Firestore vinculados ao UID.
+
+## Plataformas
+- Android: configurado.
+- iOS/macOS/web/windows: registrados no Firebase, mas nao configurados no app.
 
 ## Observacoes
 - O app so acessa dados do usuario logado.
