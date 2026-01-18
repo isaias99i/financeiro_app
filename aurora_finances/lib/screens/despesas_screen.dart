@@ -131,6 +131,23 @@ class _DespesasScreenState extends State<DespesasScreen> {
                           padding: EdgeInsets.zero,
                           primary: false,
                           buildDefaultDragHandles: false,
+                          // Mantem o item arrastado sem fundo escuro, com sombra sutil.
+                          proxyDecorator: (child, index, animation) {
+                            return Builder(
+                              builder: (context) {
+                                final tokens = AppThemeTokens.of(context);
+                                return Material(
+                                  color: Colors.transparent,
+                                  elevation: 4,
+                                  shadowColor: tokens.shadow,
+                                  borderRadius: BorderRadius.circular(
+                                    AppLayout.radiusLg,
+                                  ),
+                                  child: child,
+                                );
+                              },
+                            );
+                          },
                           itemCount: widget.store.groups.length,
                           onReorder: widget.store.reorderGroups,
                           itemBuilder: (context, index) {
@@ -1023,6 +1040,23 @@ class _GroupCard extends StatelessWidget {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     buildDefaultDragHandles: false,
+                    // Remove o fundo escuro do item arrastado.
+                    proxyDecorator: (child, index, animation) {
+                      return Builder(
+                        builder: (context) {
+                          final tokens = AppThemeTokens.of(context);
+                          return Material(
+                            color: Colors.transparent,
+                            elevation: 4,
+                            shadowColor: tokens.shadow,
+                            borderRadius: BorderRadius.circular(
+                              AppLayout.radiusMd,
+                            ),
+                            child: child,
+                          );
+                        },
+                      );
+                    },
                     itemCount: group.columns.length,
                     onReorder: onReorderColumns,
                     itemBuilder: (context, index) {
