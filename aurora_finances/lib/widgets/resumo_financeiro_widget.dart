@@ -144,29 +144,36 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
                         itemBuilder: (context, index) {
                           if (index < widget.menuStore.orderedItems.length) {
                             final entry = widget.menuStore.orderedItems[index];
-                            return _MenuItemRow(
-                        key: ValueKey(entry.item.id),
-                        title: _resolveTitle(settings, entry.item),
-                        value: _resolveValue(entry.item),
-                        color: _resolveColor(entry.item),
-                              onTap: _resolveTap(entry.item),
-                              onRemove: () =>
-                                  widget.menuStore.removeItem(entry.type, entry.item.id),
-                              dragHandle: ReorderableDelayedDragStartListener(
+                            return KeyedSubtree(
+                              key: ValueKey(entry.item.id),
+                              child: ReorderableDelayedDragStartListener(
                                 index: index,
-                                child: Tooltip(
-                                  message: 'Arrastar para reordenar',
-                                  child: Container(
-                                    height: 24,
-                                    width: 24,
-                                    decoration: BoxDecoration(
-                                      color: tokens.surfaceAlt,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.drag_indicator,
-                                      size: 14,
-                                      color: tokens.textSecondary,
+                                child: _MenuItemRow(
+                                  title: _resolveTitle(settings, entry.item),
+                                  value: _resolveValue(entry.item),
+                                  color: _resolveColor(entry.item),
+                                  onTap: _resolveTap(entry.item),
+                                  onRemove: () => widget.menuStore.removeItem(
+                                    entry.type,
+                                    entry.item.id,
+                                  ),
+                                  dragHandle: ReorderableDragStartListener(
+                                    index: index,
+                                    child: Tooltip(
+                                      message: 'Arrastar para reordenar',
+                                      child: Container(
+                                        height: 32,
+                                        width: 32,
+                                        decoration: BoxDecoration(
+                                          color: tokens.surfaceAlt,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.drag_indicator,
+                                          size: 16,
+                                          color: tokens.textSecondary,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
