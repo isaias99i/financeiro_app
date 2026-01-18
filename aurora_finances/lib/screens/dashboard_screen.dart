@@ -107,52 +107,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
           final forecast = _buildForecast(now, _forecastMonths);
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _HeroSaldoCard(
-                  saldoAtual: saldoAtual,
-                  saldoPeriodo: saldoPeriodo,
-                  periodLabel: _period.label,
-                  variation: variation,
-                  formatter: settings.currencyFormatter(),
-                ),
-                const SizedBox(height: 12),
-                _PeriodChips(
-                  selected: _period,
-                  onSelected: (value) => setState(() => _period = value),
-                ),
-                const SizedBox(height: 16),
-                ResumoFinanceiroWidget(
-                  menuStore: _menuStore,
-                  receitasStore: _receitasStore,
-                  despesasStore: _despesasStore,
-                  categoriesStore: _categoriesStore,
-                  receitas: receitasMes,
-                  despesas: despesasMes,
-                  saldoMensal: saldoMensal,
-                  saldoAposReserva: saldoAposReserva,
-                  saldoAtual: saldoAtual,
-                  segurancaAno: despesasMes * 12,
-                ),
-                const SizedBox(height: 16),
-                _ForecastCard(
-                  months: _forecastMonths,
-                  values: forecast.values,
-                  monthLabels: forecast.months
-                      .map((date) => settings.shortMonthYearFormatter().format(date))
-                      .toList(),
-                  formatter: settings.currencyFormatter(),
-                  onChanged: (value) => setState(() => _forecastMonths = value),
-                ),
-                const SizedBox(height: 20),
-                CarteiraWidget(
-                  store: _carteiraStore,
-                  expectedBalance: saldoMensal,
-                ),
-              ],
+          return RefreshIndicator(
+            onRefresh: _refreshAll,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _HeroSaldoCard(
+                    saldoAtual: saldoAtual,
+                    saldoPeriodo: saldoPeriodo,
+                    periodLabel: _period.label,
+                    variation: variation,
+                    formatter: settings.currencyFormatter(),
+                  ),
+                  const SizedBox(height: 12),
+                  _PeriodChips(
+                    selected: _period,
+                    onSelected: (value) => setState(() => _period = value),
+                  ),
+                  const SizedBox(height: 16),
+                  ResumoFinanceiroWidget(
+                    menuStore: _menuStore,
+                    receitasStore: _receitasStore,
+                    despesasStore: _despesasStore,
+                    categoriesStore: _categoriesStore,
+                    receitas: receitasMes,
+                    despesas: despesasMes,
+                    saldoMensal: saldoMensal,
+                    saldoAposReserva: saldoAposReserva,
+                    saldoAtual: saldoAtual,
+                    segurancaAno: despesasMes * 12,
+                  ),
+                  const SizedBox(height: 16),
+                  _ForecastCard(
+                    months: _forecastMonths,
+                    values: forecast.values,
+                    monthLabels: forecast.months
+                        .map((date) => settings.shortMonthYearFormatter().format(date))
+                        .toList(),
+                    formatter: settings.currencyFormatter(),
+                    onChanged: (value) => setState(() => _forecastMonths = value),
+                  ),
+                  const SizedBox(height: 20),
+                  CarteiraWidget(
+                    store: _carteiraStore,
+                    expectedBalance: saldoMensal,
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -227,6 +231,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         builder: (context) => SettingsScreen(categoriesStore: _categoriesStore),
       ),
     );
+  }
+
+  Future<void> _refreshAll() async {
+    await Future.wait([
+      _receitasStore.load(),
+      _despesasStore.load(),
+      _carteiraStore.load(),
+      _categoriesStore.load(),
+    ]);
   }
 
   Future<void> _signOut() async {
