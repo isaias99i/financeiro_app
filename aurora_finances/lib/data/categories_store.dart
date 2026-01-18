@@ -1,11 +1,16 @@
 import 'dart:collection';
-import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class CategoriesStore extends ChangeNotifier {
-  static const _categoriesKey = 'expense_categories';
+  CategoriesStore({
+    required this.userId,
+    FirebaseFirestore? firestore,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  final String userId;
+  final FirebaseFirestore _firestore;
 
   final List<String> _categories = [];
   bool _isLoaded = false;
@@ -15,16 +20,18 @@ class CategoriesStore extends ChangeNotifier {
       UnmodifiableListView(_categories);
 
   Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final categoriesJson = prefs.getString(_categoriesKey);
-
     _categories.clear();
-    if (categoriesJson != null) {
-      final decoded = jsonDecode(categoriesJson) as List<dynamic>;
+    final doc = await _docRef().get();
+    if (doc.exists) {
+      final data = doc.data() ?? <String, dynamic>{};
+      final categoriesRaw = data['categories'] as List<dynamic>? ?? [];
       _categories.addAll(
-        decoded.map((item) => item.toString()).where((name) => name.isNotEmpty),
+        categoriesRaw
+            .map((item) => item.toString())
+            .where((name) => name.isNotEmpty),
       );
-    } else {
+    }
+    if (_categories.isEmpty) {
       _categories.addAll(_defaultCategories());
     }
 
@@ -75,9 +82,10 @@ class CategoriesStore extends ChangeNotifier {
 
   void _persist() {
     if (!_isLoaded) return;
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setString(_categoriesKey, jsonEncode(_categories));
-    });
+    final payload = {
+      'categories': _categories,
+    };
+    _docRef().set(payload);
   }
 
   List<String> _defaultCategories() {
@@ -93,5 +101,13 @@ class CategoriesStore extends ChangeNotifier {
       'Equipamentos',
       'Tecnologia',
     ];
+  }
+
+  DocumentReference<Map<String, dynamic>> _docRef() {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('categories')
+        .doc('data');
   }
 }

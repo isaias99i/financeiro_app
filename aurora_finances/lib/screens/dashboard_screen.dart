@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -16,8 +17,9 @@ import '../widgets/app_settings_scope.dart';
 
 class DashboardScreen extends StatefulWidget {
   final double reserva;
+  final String userId;
 
-  const DashboardScreen({super.key, this.reserva = 0.0});
+  const DashboardScreen({super.key, required this.userId, this.reserva = 0.0});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -36,10 +38,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _menuStore = MenuStore();
-    _receitasStore = ReceitasStore();
-    _despesasStore = DespesasStore();
-    _carteiraStore = CarteiraStore();
-    _categoriesStore = CategoriesStore();
+    _receitasStore = ReceitasStore(userId: widget.userId);
+    _despesasStore = DespesasStore(userId: widget.userId);
+    _carteiraStore = CarteiraStore(userId: widget.userId);
+    _categoriesStore = CategoriesStore(userId: widget.userId);
     _receitasStore.load();
     _despesasStore.load();
     _carteiraStore.load();
@@ -66,6 +68,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onPressed: _openSettings,
             icon: const Icon(Icons.settings),
             tooltip: 'Configuracoes',
+          ),
+          IconButton(
+            onPressed: _signOut,
+            icon: const Icon(Icons.logout),
+            tooltip: 'Sair',
           ),
         ],
       ),
@@ -220,6 +227,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         builder: (context) => SettingsScreen(categoriesStore: _categoriesStore),
       ),
     );
+  }
+
+  Future<void> _signOut() async {
+    await FirebaseAuth.instance.signOut();
   }
 }
 

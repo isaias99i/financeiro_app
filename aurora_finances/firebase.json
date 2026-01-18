@@ -1,0 +1,25 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "aurora-finances",
+          "appId": "1:1095340963193:android:177f9f21b03f7e228c6ba8",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "aurora-finances",
+          "configurations": {
+            "android": "1:1095340963193:android:177f9f21b03f7e228c6ba8",
+            "ios": "1:1095340963193:ios:7a66d321f19337758c6ba8",
+            "macos": "1:1095340963193:ios:7a66d321f19337758c6ba8",
+            "web": "1:1095340963193:web:87beab1f38b414748c6ba8",
+            "windows": "1:1095340963193:web:4e42b7b506a151fb8c6ba8"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 
+import 'firebase_options.dart';
+import 'screens/auth_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'data/settings_store.dart';
 import 'theme/aurora_theme.dart';
@@ -10,11 +14,14 @@ import 'widgets/app_settings_scope.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   await initializeDateFormatting('pt_BR', null);
   await initializeDateFormatting('en_US', null);
   await initializeDateFormatting('es_ES', null);
   final settingsStore = AppSettingsStore();
-  await settingsStore.load();
+  await settingsStore.loadForUser(null);
   runApp(FinanceApp(settingsStore: settingsStore));
 }
 
@@ -61,8 +68,62 @@ class FinanceApp extends StatelessWidget {
                 child: child ?? const SizedBox.shrink(),
               );
             },
-            home: const DashboardScreen(),
+            home: AuthGate(settingsStore: settingsStore),
           ),
+        );
+      },
+    );
+  }
+}
+
+class AuthGate extends StatefulWidget {
+  final AppSettingsStore settingsStore;
+
+  const AuthGate({super.key, required this.settingsStore});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  late final Stream<User?> _authStream;
+  User? _user;
+  Future<void>? _settingsLoad;
+
+  @override
+  void initState() {
+    super.initState();
+    _authStream = FirebaseAuth.instance.authStateChanges();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: _authStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final user = snapshot.data;
+        if (_user?.uid != user?.uid) {
+          _user = user;
+          _settingsLoad = widget.settingsStore.loadForUser(user?.uid);
+        }
+        if (user == null) {
+          return const AuthScreen();
+        }
+        return FutureBuilder<void>(
+          future: _settingsLoad,
+          builder: (context, loadSnapshot) {
+            if (loadSnapshot.connectionState != ConnectionState.done) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+            return DashboardScreen(userId: user.uid);
+          },
         );
       },
     );

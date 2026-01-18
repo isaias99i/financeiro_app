@@ -1,18 +1,20 @@
 import 'dart:collection';
-import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/despesas_models.dart';
 import '../utils/month_key.dart';
 
 
 class DespesasStore extends ChangeNotifier {
-  static const _groupsKey = 'despesas_groups';
-  static const _entriesKey = 'despesas_entries';
-  static const _legacyValuesKey = 'despesas_values';
-  static const _simpleValuesKey = 'despesas_simple_values';
+  DespesasStore({
+    required this.userId,
+    FirebaseFirestore? firestore,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  final String userId;
+  final FirebaseFirestore _firestore;
 
   final List<ExpenseGroup> _groups = [];
   final List<ExpenseEntry> _entries = [];
@@ -25,37 +27,25 @@ class DespesasStore extends ChangeNotifier {
   UnmodifiableListView<ExpenseEntry> get entries => UnmodifiableListView(_entries);
 
   Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final groupsJson = prefs.getString(_groupsKey);
-    final entriesJson = prefs.getString(_entriesKey);
-    final legacyValuesJson = prefs.getString(_legacyValuesKey);
-    final simpleValuesJson = prefs.getString(_simpleValuesKey);
-
+    final doc = await _docRef().get();
     _groups.clear();
-    if (groupsJson != null) {
-      final decoded = jsonDecode(groupsJson) as List<dynamic>;
-      for (final item in decoded) {
+    _entries.clear();
+    _simpleValues.clear();
+    if (doc.exists) {
+      final data = doc.data() ?? <String, dynamic>{};
+      final groupsRaw = data['groups'] as List<dynamic>? ?? [];
+      for (final item in groupsRaw) {
         final map = item as Map<String, dynamic>;
         _groups.add(ExpenseGroup.fromJson(map));
       }
-    }
-
-    _entries.clear();
-    if (entriesJson != null) {
-      final decoded = jsonDecode(entriesJson) as List<dynamic>;
+      final entriesRaw = data['entries'] as List<dynamic>? ?? [];
       _entries.addAll(
-        decoded
+        entriesRaw
             .map((item) => ExpenseEntry.fromJson(item as Map<String, dynamic>))
             .toList(),
       );
-    } else if (legacyValuesJson != null) {
-      _migrateLegacyValues(legacyValuesJson);
-    }
-
-    _simpleValues.clear();
-    if (simpleValuesJson != null) {
-      final decoded = jsonDecode(simpleValuesJson) as Map<String, dynamic>;
-      decoded.forEach((key, value) {
+      final simpleValuesRaw = data['simpleValues'] as Map<String, dynamic>? ?? {};
+      simpleValuesRaw.forEach((key, value) {
         if (value is num) {
           _simpleValues[key] = value.toDouble();
         }
@@ -204,14 +194,12 @@ class DespesasStore extends ChangeNotifier {
 
   void _persist() {
     if (!_isLoaded) return;
-    SharedPreferences.getInstance().then((prefs) {
-      final groupsJson = jsonEncode(_groups.map((g) => g.toJson()).toList());
-      prefs.setString(_groupsKey, groupsJson);
-      final entriesJson = jsonEncode(_entries.map((entry) => entry.toJson()).toList());
-      prefs.setString(_entriesKey, entriesJson);
-      final simpleValuesJson = jsonEncode(_simpleValues);
-      prefs.setString(_simpleValuesKey, simpleValuesJson);
-    });
+    final payload = {
+      'groups': _groups.map((g) => g.toJson()).toList(),
+      'entries': _entries.map((entry) => entry.toJson()).toList(),
+      'simpleValues': _simpleValues,
+    };
+    _docRef().set(payload);
   }
 
   static String _simpleKey(DateTime month, String columnId) {
@@ -225,35 +213,11 @@ class DespesasStore extends ChangeNotifier {
     return '${DateTime.now().microsecondsSinceEpoch}_$_idCounter';
   }
 
-  void _migrateLegacyValues(String legacyValuesJson) {
-    final decoded = jsonDecode(legacyValuesJson) as Map<String, dynamic>;
-    decoded.forEach((key, value) {
-      if (value is! num) {
-        return;
-      }
-      final parts = key.split('|');
-      if (parts.length != 2) {
-        return;
-      }
-      final month = parseMonthKey(parts[0]);
-      if (month == null) {
-        return;
-      }
-      final amount = value.toDouble();
-      if (amount <= 0) {
-        return;
-      }
-      _entries.add(
-        ExpenseEntry(
-          id: _nextId(),
-          columnId: parts[1],
-          date: month,
-          category: 'Migrado',
-          reason: 'Saldo anterior',
-          amount: amount,
-        ),
-      );
-    });
+  DocumentReference<Map<String, dynamic>> _docRef() {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('despesas')
+        .doc('data');
   }
-
 }

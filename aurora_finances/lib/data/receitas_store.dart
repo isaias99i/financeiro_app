@@ -1,15 +1,19 @@
 import 'dart:collection';
-import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/receitas_models.dart';
 import '../utils/month_key.dart';
 
 class ReceitasStore extends ChangeNotifier {
-  static const _salaryKey = 'receitas_salary_by_month';
-  static const _extrasKey = 'receitas_extras';
+  ReceitasStore({
+    required this.userId,
+    FirebaseFirestore? firestore,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  final String userId;
+  final FirebaseFirestore _firestore;
 
   final Map<String, double> _salaryByMonth = {};
   List<ExtraEntry> _extras = [];
@@ -46,7 +50,7 @@ class ReceitasStore extends ChangeNotifier {
     final target = monthKey(date);
     return _extras
         .where((entry) => monthKey(entry.date) == target)
-        .fold(0.0, (sum, entry) => sum + entry.amount);
+        .fold(0.0, (total, entry) => total + entry.amount);
   }
 
   double totalForMonth(DateTime date) {
@@ -62,23 +66,18 @@ class ReceitasStore extends ChangeNotifier {
   }
 
   Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final salaryJson = prefs.getString(_salaryKey);
-    final extrasJson = prefs.getString(_extrasKey);
-
+    final doc = await _docRef().get();
     _salaryByMonth.clear();
-    if (salaryJson != null) {
-      final decoded = jsonDecode(salaryJson) as Map<String, dynamic>;
-      decoded.forEach((key, value) {
+    _extras = [];
+    if (doc.exists) {
+      final data = doc.data() ?? <String, dynamic>{};
+      final salaryRaw = data['salaryByMonth'] as Map<String, dynamic>? ?? {};
+      salaryRaw.forEach((key, value) {
         final numVal = value is num ? value.toDouble() : 0.0;
         _salaryByMonth[key] = numVal;
       });
-    }
-
-    _extras = [];
-    if (extrasJson != null) {
-      final decoded = jsonDecode(extrasJson) as List<dynamic>;
-      _extras = decoded.map((item) {
+      final extrasRaw = data['extras'] as List<dynamic>? ?? [];
+      _extras = extrasRaw.map((item) {
         final map = item as Map<String, dynamic>;
         return ExtraEntry(
           date: DateTime.fromMillisecondsSinceEpoch(map['date'] as int),
@@ -87,7 +86,6 @@ class ReceitasStore extends ChangeNotifier {
         );
       }).toList();
     }
-
     _isLoaded = true;
     notifyListeners();
   }
@@ -96,19 +94,24 @@ class ReceitasStore extends ChangeNotifier {
     if (!_isLoaded) {
       return;
     }
-    SharedPreferences.getInstance().then((prefs) {
-      final salaryJson = jsonEncode(_salaryByMonth);
-      final extrasJson = jsonEncode(
-        _extras
-            .map((entry) => {
-                  'date': entry.date.millisecondsSinceEpoch,
-                  'amount': entry.amount,
-                  'note': entry.note,
-                })
-            .toList(),
-      );
-      prefs.setString(_salaryKey, salaryJson);
-      prefs.setString(_extrasKey, extrasJson);
-    });
+    final payload = {
+      'salaryByMonth': _salaryByMonth,
+      'extras': _extras
+          .map((entry) => {
+                'date': entry.date.millisecondsSinceEpoch,
+                'amount': entry.amount,
+                'note': entry.note,
+              })
+          .toList(),
+    };
+    _docRef().set(payload);
+  }
+
+  DocumentReference<Map<String, dynamic>> _docRef() {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('receitas')
+        .doc('data');
   }
 }

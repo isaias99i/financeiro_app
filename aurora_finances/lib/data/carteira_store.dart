@@ -1,13 +1,18 @@
 import 'dart:collection';
-import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/carteira_models.dart';
 
 class CarteiraStore extends ChangeNotifier {
-  static const _banksKey = 'carteira_bancos';
+  CarteiraStore({
+    required this.userId,
+    FirebaseFirestore? firestore,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  final String userId;
+  final FirebaseFirestore _firestore;
 
   final List<BankAccount> _banks = [];
   bool _isLoaded = false;
@@ -18,7 +23,7 @@ class CarteiraStore extends ChangeNotifier {
   UnmodifiableListView<BankAccount> get banks => UnmodifiableListView(_banks);
 
   double get totalBalance =>
-      _banks.fold(0.0, (sum, bank) => sum + bank.balance);
+      _banks.fold(0.0, (total, bank) => total + bank.balance);
 
   void addBank(BankAccount bank) {
     _banks.add(bank);
@@ -48,14 +53,13 @@ class CarteiraStore extends ChangeNotifier {
   }
 
   Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final banksJson = prefs.getString(_banksKey);
-
     _banks.clear();
-    if (banksJson != null) {
-      final decoded = jsonDecode(banksJson) as List<dynamic>;
+    final doc = await _docRef().get();
+    if (doc.exists) {
+      final data = doc.data() ?? <String, dynamic>{};
+      final banksRaw = data['banks'] as List<dynamic>? ?? [];
       _banks.addAll(
-        decoded
+        banksRaw
             .map((item) => BankAccount.fromJson(item as Map<String, dynamic>))
             .toList(),
       );
@@ -69,9 +73,17 @@ class CarteiraStore extends ChangeNotifier {
     if (!_isLoaded) {
       return;
     }
-    SharedPreferences.getInstance().then((prefs) {
-      final banksJson = jsonEncode(_banks.map((bank) => bank.toJson()).toList());
-      prefs.setString(_banksKey, banksJson);
-    });
+    final payload = {
+      'banks': _banks.map((bank) => bank.toJson()).toList(),
+    };
+    _docRef().set(payload);
+  }
+
+  DocumentReference<Map<String, dynamic>> _docRef() {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('carteira')
+        .doc('data');
   }
 }

@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "1095340963193",
+    "project_id": "aurora-finances",
+    "storage_bucket": "aurora-finances.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1095340963193:android:177f9f21b03f7e228c6ba8",
+        "android_client_info": {
+          "package_name": "com.auroratechadvisors.aurora_finances"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1095340963193-gjcphv4i2dal0gugp52r4ari5cj6ers2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.auroratechadvisors.aurora_finances",
+            "certificate_hash": "d4d19e0ae01833418f408ebac21657e35151c654"
+          }
+        },
+        {
+          "client_id": "1095340963193-tjiv95nlerc10oa6ntnmjhhpkia7ua14.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBnLcNF8FhDopHbkMUM-bmY0IgrwwQoTBc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1095340963193-tjiv95nlerc10oa6ntnmjhhpkia7ua14.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1095340963193-odog8j4bjolel4lsjb6ifqduug23km5s.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.auroratechadvisors.aurorafinances"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

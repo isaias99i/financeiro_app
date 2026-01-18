@@ -1,8 +1,8 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 enum AppThemeStyle { aurora, dusk, glacier }
 enum ContrastLevel { normal, high }
@@ -11,7 +11,11 @@ enum AppFontFamily { spaceGrotesk, manrope, outfit }
 enum DateFormatStyle { dayMonthYear, monthDayYear, yearMonthDay }
 
 class AppSettingsStore extends ChangeNotifier {
-  static const _settingsKey = 'app_settings';
+  AppSettingsStore({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  final FirebaseFirestore _firestore;
+  String? _userId;
 
   AppThemeStyle themeStyle = AppThemeStyle.aurora;
   ContrastLevel contrastLevel = ContrastLevel.normal;
@@ -26,11 +30,17 @@ class AppSettingsStore extends ChangeNotifier {
   bool _isLoaded = false;
   bool get isLoaded => _isLoaded;
 
-  Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_settingsKey);
-    if (raw != null) {
-      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+  Future<void> loadForUser(String? userId) async {
+    _userId = userId;
+    if (userId == null) {
+      _resetDefaults();
+      _isLoaded = true;
+      notifyListeners();
+      return;
+    }
+    final doc = await _docRef().get();
+    if (doc.exists) {
+      final decoded = doc.data() ?? <String, dynamic>{};
       themeStyle = _themeFromName(decoded['themeStyle'] as String?);
       contrastLevel = _contrastFromName(decoded['contrastLevel'] as String?);
       typographyScale = _scaleFromName(decoded['typographyScale'] as String?);
@@ -39,17 +49,21 @@ class AppSettingsStore extends ChangeNotifier {
       currencySymbol = (decoded['currencySymbol'] as String?) ?? currencySymbol;
       dateFormatStyle = _dateFromName(decoded['dateFormatStyle'] as String?);
       final labelsRaw = decoded['metricLabels'] as Map<String, dynamic>?;
+      metricLabels.clear();
       if (labelsRaw != null) {
-        metricLabels
-          ..clear()
-          ..addAll(labelsRaw.map((key, value) => MapEntry(key, value.toString())));
+        metricLabels.addAll(
+          labelsRaw.map((key, value) => MapEntry(key, value.toString())),
+        );
       }
       final colorsRaw = decoded['metricColors'] as Map<String, dynamic>?;
+      metricColors.clear();
       if (colorsRaw != null) {
-        metricColors
-          ..clear()
-          ..addAll(colorsRaw.map((key, value) => MapEntry(key, value as int)));
+        metricColors.addAll(
+          colorsRaw.map((key, value) => MapEntry(key, value as int)),
+        );
       }
+    } else {
+      _resetDefaults();
     }
     _isLoaded = true;
     notifyListeners();
@@ -146,7 +160,7 @@ class AppSettingsStore extends ChangeNotifier {
   }
 
   void _persist() {
-    if (!_isLoaded) return;
+    if (!_isLoaded || _userId == null) return;
     final payload = jsonEncode({
       'themeStyle': themeStyle.name,
       'contrastLevel': contrastLevel.name,
@@ -158,9 +172,8 @@ class AppSettingsStore extends ChangeNotifier {
       'metricLabels': metricLabels,
       'metricColors': metricColors,
     });
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setString(_settingsKey, payload);
-    });
+    final decoded = jsonDecode(payload) as Map<String, dynamic>;
+    _docRef().set(decoded);
     notifyListeners();
   }
 
@@ -197,5 +210,25 @@ class AppSettingsStore extends ChangeNotifier {
       (value) => value.name == name,
       orElse: () => DateFormatStyle.dayMonthYear,
     );
+  }
+
+  DocumentReference<Map<String, dynamic>> _docRef() {
+    return _firestore
+        .collection('users')
+        .doc(_userId)
+        .collection('settings')
+        .doc('data');
+  }
+
+  void _resetDefaults() {
+    themeStyle = AppThemeStyle.aurora;
+    contrastLevel = ContrastLevel.normal;
+    typographyScale = TypographyScale.normal;
+    fontFamily = AppFontFamily.spaceGrotesk;
+    currencyLocale = 'pt_BR';
+    currencySymbol = 'R\$';
+    dateFormatStyle = DateFormatStyle.dayMonthYear;
+    metricLabels.clear();
+    metricColors.clear();
   }
 }
