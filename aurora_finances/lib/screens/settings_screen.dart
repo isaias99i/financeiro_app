@@ -8,6 +8,7 @@ import '../data/despesas_store.dart';
 import '../data/receitas_store.dart';
 import '../screens/categorias_screen.dart';
 import '../screens/appearance_screen.dart';
+import '../screens/fatura_import_screen.dart';
 import '../screens/labels_colors_screen.dart';
 import '../screens/formatting_screen.dart';
 import '../screens/typography_screen.dart';
@@ -58,145 +59,180 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 subtitle: 'Ajuste o app no seu ritmo.',
               ),
               const SizedBox(height: 16),
-              _SettingsSection(
-                title: 'Despesas',
-                children: [
-                  _SettingsItem(
-                    title: 'Categorias',
-                    subtitle: 'Gerencie categorias globais',
-                    badge: '$categoriesCount',
-                    icon: Icons.category,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              CategoriasScreen(store: widget.categoriesStore),
-                        ),
-                      );
-                    },
-                  ),
-                  _SettingsItem(
-                    title: 'Rotulos e cores',
-                    subtitle: 'Nomes e paleta do resumo',
-                    icon: Icons.palette_outlined,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LabelsColorsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
+              _buildDespesasSection(categoriesCount),
               const SizedBox(height: 12),
-              _SettingsSection(
-                title: 'Aparencia',
-                children: [
-                  _SettingsItem(
-                    title: 'Tema e contraste',
-                    subtitle: 'Ajustes visuais do app',
-                    icon: Icons.auto_awesome,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AppearanceScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _SettingsItem(
-                    title: 'Tipografia',
-                    subtitle: 'Tamanho e estilo das fontes',
-                    icon: Icons.text_fields,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const TypographyScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
+              _buildAppearanceSection(),
               const SizedBox(height: 12),
-              _SettingsSection(
-                title: 'Moeda e formato',
-                children: [
-                  _SettingsItem(
-                    title: 'Moeda',
-                    subtitle: 'Escolha a moeda padrao',
-                    icon: Icons.attach_money,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const FormattingScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _SettingsItem(
-                    title: 'Formato de data',
-                    subtitle: 'Defina o padrao de exibicao',
-                    icon: Icons.date_range,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const FormattingScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
+              _buildFormattingSection(),
               const SizedBox(height: 12),
-              _SettingsSection(
-                title: 'Dados',
-                children: [
-                  _SettingsItem(
-                    title: 'Backup e restauracao',
-                    subtitle: 'Em breve',
-                    icon: Icons.cloud_upload_outlined,
-                    isDisabled: true,
-                  ),
-                  _SettingsItem(
-                    title: 'Exportar relatorio',
-                    subtitle: 'Em breve',
-                    icon: Icons.download_outlined,
-                    isDisabled: true,
-                  ),
-                ],
-              ),
+              _buildDataSection(),
               const SizedBox(height: 12),
-              _SettingsSection(
-                title: 'Conta e dados',
-                children: [
-                  _SettingsItem(
-                    title: 'Redefinir dados do app',
-                    subtitle: 'Apaga receitas, despesas, carteira e categorias',
-                    icon: Icons.restart_alt,
-                    isDestructive: true,
-                    onTap: _isBusy ? null : () => _confirmReset(deleteAccount: false),
-                  ),
-                  _SettingsItem(
-                    title: 'Excluir conta e dados',
-                    subtitle: 'Remove todos os dados e a conta do sistema',
-                    icon: Icons.delete_forever,
-                    isDestructive: true,
-                    onTap: _isBusy ? null : () => _confirmReset(deleteAccount: true),
-                  ),
-                ],
-              ),
+              _buildAccountSection(),
             ],
           );
         },
       ),
+    );
+  }
+
+  Widget _buildDespesasSection(int categoriesCount) {
+    return _SettingsSection(
+      title: 'Despesas',
+      children: [
+        _SettingsItem(
+          title: 'Categorias',
+          subtitle: 'Gerencie categorias globais',
+          badge: '$categoriesCount',
+          icon: Icons.category,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CategoriasScreen(store: widget.categoriesStore),
+              ),
+            );
+          },
+        ),
+        _SettingsItem(
+          title: 'Rotulos e cores',
+          subtitle: 'Nomes e paleta do resumo',
+          icon: Icons.palette_outlined,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const LabelsColorsScreen(),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAppearanceSection() {
+    return _SettingsSection(
+      title: 'Aparencia',
+      children: [
+        _SettingsItem(
+          title: 'Tema e contraste',
+          subtitle: 'Ajustes visuais do app',
+          icon: Icons.auto_awesome,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AppearanceScreen(),
+              ),
+            );
+          },
+        ),
+        _SettingsItem(
+          title: 'Tipografia',
+          subtitle: 'Tamanho e estilo das fontes',
+          icon: Icons.text_fields,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const TypographyScreen(),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFormattingSection() {
+    return _SettingsSection(
+      title: 'Moeda e formato',
+      children: [
+        _SettingsItem(
+          title: 'Moeda',
+          subtitle: 'Escolha a moeda padrao',
+          icon: Icons.attach_money,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const FormattingScreen(),
+              ),
+            );
+          },
+        ),
+        _SettingsItem(
+          title: 'Formato de data',
+          subtitle: 'Defina o padrao de exibicao',
+          icon: Icons.date_range,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const FormattingScreen(),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDataSection() {
+    return _SettingsSection(
+      title: 'Dados',
+      children: [
+        _SettingsItem(
+          title: 'Importar fatura (PDF)',
+          subtitle: 'OCR para cartao de credito',
+          icon: Icons.receipt_long,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => FaturaImportScreen(
+                  despesasStore: widget.despesasStore,
+                  categoriesStore: widget.categoriesStore,
+                ),
+              ),
+            );
+          },
+        ),
+        _SettingsItem(
+          title: 'Backup e restauracao',
+          subtitle: 'Em breve',
+          icon: Icons.cloud_upload_outlined,
+          isDisabled: true,
+        ),
+        _SettingsItem(
+          title: 'Exportar relatorio',
+          subtitle: 'Em breve',
+          icon: Icons.download_outlined,
+          isDisabled: true,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAccountSection() {
+    return _SettingsSection(
+      title: 'Conta e dados',
+      children: [
+        _SettingsItem(
+          title: 'Redefinir dados do app',
+          subtitle: 'Apaga receitas, despesas, carteira e categorias',
+          icon: Icons.restart_alt,
+          isDestructive: true,
+          onTap: _isBusy ? null : () => _confirmReset(deleteAccount: false),
+        ),
+        _SettingsItem(
+          title: 'Excluir conta e dados',
+          subtitle: 'Remove todos os dados e a conta do sistema',
+          icon: Icons.delete_forever,
+          isDestructive: true,
+          onTap: _isBusy ? null : () => _confirmReset(deleteAccount: true),
+        ),
+      ],
     );
   }
 
@@ -245,12 +281,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       batch.delete(userRef.collection('categories').doc('data'));
       await batch.commit();
 
+      if (!mounted) return;
+      final settingsStore = AppSettingsScope.of(context);
       await Future.wait([
         widget.receitasStore.load(),
         widget.despesasStore.load(),
         widget.carteiraStore.load(),
         widget.categoriesStore.load(),
-        AppSettingsScope.of(context).loadForUser(user.uid),
+        settingsStore.loadForUser(user.uid),
       ]);
 
       if (deleteAccount) {
