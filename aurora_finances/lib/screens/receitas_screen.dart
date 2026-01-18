@@ -8,15 +8,18 @@ import '../utils/month_key.dart';
 import '../widgets/aurora_scaffold.dart';
 import '../widgets/app_settings_scope.dart';
 
+// Tela de receitas com salario e extras.
 class ReceitasScreen extends StatefulWidget {
   final ReceitasStore store;
 
   const ReceitasScreen({super.key, required this.store});
 
   @override
+  // Cria o estado da tela de receitas.
   State<ReceitasScreen> createState() => _ReceitasScreenState();
 }
 
+// Estado das receitas com tabs de salario e extras.
 class _ReceitasScreenState extends State<ReceitasScreen>
     with SingleTickerProviderStateMixin {
   static final DateTime _startDate = DateTime(2026, 1, 1);
@@ -27,6 +30,7 @@ class _ReceitasScreenState extends State<ReceitasScreen>
   DateTime? _extrasFilterMonth;
 
   @override
+  // Inicializa o store e o controle de tabs.
   void initState() {
     super.initState();
     if (!widget.store.isLoaded) {
@@ -40,6 +44,7 @@ class _ReceitasScreenState extends State<ReceitasScreen>
   }
 
   @override
+  // Libera controllers do salario e tab.
   void dispose() {
     for (final controller in _salaryControllers.values) {
       controller.dispose();
@@ -49,6 +54,7 @@ class _ReceitasScreenState extends State<ReceitasScreen>
   }
 
   @override
+  // Monta a UI principal das receitas.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
     final moneyFormatter = settings.currencyFormatter();
@@ -107,6 +113,7 @@ class _ReceitasScreenState extends State<ReceitasScreen>
     );
   }
 
+  // Lista meses entre datas limite.
   List<DateTime> _buildMonths() {
     final months = <DateTime>[];
     var current = _startDate;
@@ -117,6 +124,7 @@ class _ReceitasScreenState extends State<ReceitasScreen>
     return months;
   }
 
+  // Retorna controller do salario para o mes.
   TextEditingController _controllerFor(DateTime date, NumberFormat formatter) {
     final key = monthKey(date);
     return _salaryControllers.putIfAbsent(key, () {
@@ -129,11 +137,13 @@ class _ReceitasScreenState extends State<ReceitasScreen>
     });
   }
 
+  // Atualiza salario do mes atual.
   void _updateSalary(DateTime date, String value) {
     final parsed = parseCurrencyToDouble(value);
     widget.store.setSalaryForMonth(date, parsed);
   }
 
+  // Aplica salario fixo a partir de um mes.
   void _applySalaryFromMonth(DateTime date) {
     final formatter = AppSettingsScope.of(context).currencyFormatter();
     final controller = _controllerFor(date, formatter);
@@ -153,20 +163,24 @@ class _ReceitasScreenState extends State<ReceitasScreen>
     _showSnack('Salario atualizado');
   }
 
+  // Remove uma entrada extra.
   void _removeExtra(ExtraEntry entry) {
     final updated = widget.store.extras.toList()..remove(entry);
     widget.store.setExtras(updated);
     _showSnack('Extra removido');
   }
 
+  // Abre dialogo para adicionar extra.
   Future<void> _showAddExtraDialog() async {
     await _showExtraDialog();
   }
 
+  // Abre dialogo para editar extra.
   Future<void> _showEditExtraDialog(ExtraEntry entry) async {
     await _showExtraDialog(entry: entry);
   }
 
+  // Dialogo principal de extra.
   Future<void> _showExtraDialog({ExtraEntry? entry}) async {
     final settings = AppSettingsScope.of(context);
     final noteController = TextEditingController(text: entry?.note ?? '');
@@ -383,6 +397,7 @@ class _ReceitasScreenState extends State<ReceitasScreen>
       },
     );
   }
+  // Abre o seletor de data.
   Future<DateTime?> _pickDate({
     required BuildContext context,
     required DateTime initialDate,
@@ -397,6 +412,7 @@ class _ReceitasScreenState extends State<ReceitasScreen>
     );
   }
 
+  // Exibe snackbar com feedback rapido.
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -408,6 +424,7 @@ class _ReceitasScreenState extends State<ReceitasScreen>
     );
   }
 
+  // Monta lista de meses com extras.
   List<DateTime> _buildExtrasMonths(List<ExtraEntry> entries) {
     final months = <DateTime>{};
     for (final entry in entries) {
@@ -419,6 +436,7 @@ class _ReceitasScreenState extends State<ReceitasScreen>
   }
 }
 
+// Lista de cards mensais de salario.
 class _MonthlyCards extends StatelessWidget {
   final List<DateTime> months;
   final NumberFormat moneyFormatter;
@@ -439,6 +457,7 @@ class _MonthlyCards extends StatelessWidget {
   });
 
   @override
+  // Monta a lista de meses.
   Widget build(BuildContext context) {
     return ListView.separated(
       padding: const EdgeInsets.all(16),
@@ -464,6 +483,7 @@ class _MonthlyCards extends StatelessWidget {
   }
 }
 
+// Card de receita mensal com totais.
 class _ReceitaCard extends StatelessWidget {
   final String title;
   final TextEditingController salaryController;
@@ -482,6 +502,7 @@ class _ReceitaCard extends StatelessWidget {
   });
 
   @override
+  // Monta o card de receita.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
     return Container(
@@ -558,6 +579,7 @@ class _ReceitaCard extends StatelessWidget {
   }
 }
 
+// Linha simples de label e valor.
 class _ReceitaRow extends StatelessWidget {
   final String label;
   final Widget child;
@@ -568,6 +590,7 @@ class _ReceitaRow extends StatelessWidget {
   });
 
   @override
+  // Monta a linha de label/valor.
   Widget build(BuildContext context) {
     return Row(
       children: [
@@ -584,6 +607,7 @@ class _ReceitaRow extends StatelessWidget {
   }
 }
 
+// Lista de entradas extras com filtro.
 class _ExtrasList extends StatelessWidget {
   final List<ExtraEntry> entries;
   final List<DateTime> availableMonths;
@@ -606,6 +630,7 @@ class _ExtrasList extends StatelessWidget {
   });
 
   @override
+  // Monta a lista de extras e filtros.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
     final dateFormatter = settings.dateFormatter();
@@ -673,6 +698,7 @@ class _ExtrasList extends StatelessWidget {
   }
 }
 
+// Barra de filtro por mes dos extras.
 class _ExtrasFilterBar extends StatelessWidget {
   final List<DateTime> months;
   final DateTime? selected;
@@ -685,6 +711,7 @@ class _ExtrasFilterBar extends StatelessWidget {
   });
 
   @override
+  // Monta o filtro de meses.
   Widget build(BuildContext context) {
     final formatter = AppSettingsScope.of(context).shortMonthYearFormatter();
     return Container(
@@ -727,12 +754,14 @@ class _ExtrasFilterBar extends StatelessWidget {
   }
 }
 
+// Estado vazio para lista de extras.
 class _EmptyExtras extends StatelessWidget {
   final VoidCallback onAdd;
 
   const _EmptyExtras({required this.onAdd});
 
   @override
+  // Monta o estado vazio de extras.
   Widget build(BuildContext context) {
     return Center(
       child: Container(

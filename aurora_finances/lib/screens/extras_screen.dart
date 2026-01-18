@@ -4,6 +4,7 @@ import '../utils/currency_input_formatter.dart';
 import '../widgets/aurora_scaffold.dart';
 import '../widgets/app_settings_scope.dart';
 
+// Tela simples para listar e editar extras.
 class ExtrasScreen extends StatefulWidget {
   final List<ExtraEntry> initialEntries;
   final DateTime? filterMonth;
@@ -17,19 +18,23 @@ class ExtrasScreen extends StatefulWidget {
   });
 
   @override
+  // Cria o estado da tela de extras.
   State<ExtrasScreen> createState() => _ExtrasScreenState();
 }
 
+// Estado da tela de extras com filtro opcional.
 class _ExtrasScreenState extends State<ExtrasScreen> {
   late List<ExtraEntry> _entries;
 
   @override
+  // Inicializa a lista local de extras.
   void initState() {
     super.initState();
     _entries = List<ExtraEntry>.from(widget.initialEntries);
   }
 
   @override
+  // Monta a lista de extras.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
     final formatter = settings.dateFormatter();
@@ -86,6 +91,7 @@ class _ExtrasScreenState extends State<ExtrasScreen> {
     );
   }
 
+  // Abre dialogo para adicionar extra.
   Future<void> _showAddDialog() async {
     final settings = AppSettingsScope.of(context);
     final noteController = TextEditingController();
@@ -171,6 +177,7 @@ class _ExtrasScreenState extends State<ExtrasScreen> {
     );
   }
 
+  // Aplica filtro de mes se existir.
   List<ExtraEntry> _visibleEntries() {
     final filter = widget.filterMonth;
     if (filter == null) {

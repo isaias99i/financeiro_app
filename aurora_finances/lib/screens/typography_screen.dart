@@ -4,10 +4,12 @@ import '../data/settings_store.dart';
 import '../widgets/app_settings_scope.dart';
 import '../widgets/aurora_scaffold.dart';
 
+// Tela de configuracao de tipografia.
 class TypographyScreen extends StatelessWidget {
   const TypographyScreen({super.key});
 
   @override
+  // Monta as opcoes de fonte e escala.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
 
@@ -68,6 +70,7 @@ class TypographyScreen extends StatelessWidget {
     );
   }
 
+  // Retorna label amigavel da fonte.
   String _fontLabel(AppFontFamily font) {
     return switch (font) {
       AppFontFamily.spaceGrotesk => 'Space Grotesk',
@@ -76,6 +79,7 @@ class TypographyScreen extends StatelessWidget {
     };
   }
 
+  // Retorna label da escala tipografica.
   String _scaleLabel(TypographyScale scale) {
     return switch (scale) {
       TypographyScale.small => 'Pequeno',
@@ -85,6 +89,7 @@ class TypographyScreen extends StatelessWidget {
     };
   }
 
+  // Converte valor do slider em escala.
   TypographyScale _scaleFromValue(double value) {
     if (value <= 0.92) return TypographyScale.small;
     if (value <= 1.0) return TypographyScale.normal;
@@ -92,6 +97,7 @@ class TypographyScreen extends StatelessWidget {
     return TypographyScale.xlarge;
   }
 
+  // Cria decoracao padrao dos campos.
   InputDecoration _inputDecoration() {
     return InputDecoration(
       filled: true,
@@ -108,6 +114,7 @@ class TypographyScreen extends StatelessWidget {
   }
 }
 
+// Card de secao reutilizavel.
 class _SectionCard extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -120,6 +127,7 @@ class _SectionCard extends StatelessWidget {
   });
 
   @override
+  // Monta o card de secao.
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),

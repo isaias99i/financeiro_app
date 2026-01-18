@@ -4,10 +4,12 @@ import '../data/settings_store.dart';
 import '../widgets/app_settings_scope.dart';
 import '../widgets/aurora_scaffold.dart';
 
+// Tela de configuracao de moeda e data.
 class FormattingScreen extends StatelessWidget {
   const FormattingScreen({super.key});
 
   @override
+  // Monta as opcoes de formato e moeda.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
 
@@ -68,6 +70,7 @@ class FormattingScreen extends StatelessWidget {
     );
   }
 
+  // Resolve a opcao de moeda atual.
   _CurrencyOption _currencyFromSettings(AppSettingsStore settings) {
     return _currencies.firstWhere(
       (option) =>
@@ -76,6 +79,7 @@ class FormattingScreen extends StatelessWidget {
     );
   }
 
+  // Retorna label de exibicao do formato de data.
   String _dateLabel(DateFormatStyle style) {
     return switch (style) {
       DateFormatStyle.dayMonthYear => 'DD/MM/AAAA',
@@ -85,6 +89,7 @@ class FormattingScreen extends StatelessWidget {
   }
 }
 
+// Modelo interno de moeda suportada.
 class _CurrencyOption {
   final String label;
   final String locale;
@@ -103,6 +108,7 @@ const List<_CurrencyOption> _currencies = [
   _CurrencyOption(label: 'Euro', locale: 'es_ES', symbol: '€'),
 ];
 
+// Card de secao para as configuracoes.
 class _SectionCard extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -115,6 +121,7 @@ class _SectionCard extends StatelessWidget {
   });
 
   @override
+  // Monta o card de secao.
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),

@@ -1,3 +1,4 @@
+// Registro de receita extra.
 class ExtraEntry {
   final DateTime date;
   final double amount;

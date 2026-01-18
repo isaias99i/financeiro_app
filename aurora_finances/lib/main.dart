@@ -12,6 +12,7 @@ import 'data/settings_store.dart';
 import 'theme/aurora_theme.dart';
 import 'widgets/app_settings_scope.dart';
 
+// Ponto de entrada do app.
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -25,11 +26,13 @@ void main() async {
   runApp(FinanceApp(settingsStore: settingsStore));
 }
 
+// Widget raiz que aplica tema e localizacao.
 class FinanceApp extends StatelessWidget {
   final AppSettingsStore settingsStore;
 
   const FinanceApp({super.key, required this.settingsStore});
 
+  // Construi MaterialApp com tema e escopo de settings.
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -76,6 +79,7 @@ class FinanceApp extends StatelessWidget {
   }
 }
 
+// Gate de autenticacao para decidir login ou dashboard.
 class AuthGate extends StatefulWidget {
   final AppSettingsStore settingsStore;
 
@@ -90,12 +94,14 @@ class _AuthGateState extends State<AuthGate> {
   User? _user;
   Future<void>? _settingsLoad;
 
+  // Escuta mudancas de autenticacao.
   @override
   void initState() {
     super.initState();
     _authStream = FirebaseAuth.instance.authStateChanges();
   }
 
+  // Renderiza login, loading ou dashboard conforme o estado.
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(

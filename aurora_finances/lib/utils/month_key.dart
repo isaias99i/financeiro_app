@@ -1,9 +1,11 @@
+// Gera chave YYYY-MM a partir de uma data.
 String monthKey(DateTime date) {
   final year = date.year.toString().padLeft(4, '0');
   final month = date.month.toString().padLeft(2, '0');
   return '$year-$month';
 }
 
+// Converte chave YYYY-MM para data no primeiro dia do mes.
 DateTime? parseMonthKey(String key) {
   final parts = key.split('-');
   if (parts.length != 2) {
@@ -17,6 +19,7 @@ DateTime? parseMonthKey(String key) {
   return DateTime(year, month, 1);
 }
 
+// Verifica se duas datas estao no mesmo mes.
 bool isSameMonth(DateTime a, DateTime b) {
   return a.year == b.year && a.month == b.month;
 }

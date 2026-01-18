@@ -1,3 +1,4 @@
+// Modelo de conta bancaria na carteira.
 class BankAccount {
   final String id;
   final String name;
@@ -11,6 +12,7 @@ class BankAccount {
     required this.colorValue,
   });
 
+  // Copia o modelo alterando apenas os campos informados.
   BankAccount copyWith({
     String? name,
     double? balance,
@@ -24,6 +26,7 @@ class BankAccount {
     );
   }
 
+  // Serializa para salvar no armazenamento.
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -33,6 +36,7 @@ class BankAccount {
     };
   }
 
+  // Reconstrui o modelo a partir do JSON salvo.
   factory BankAccount.fromJson(Map<String, dynamic> json) {
     return BankAccount(
       id: json['id'] as String,

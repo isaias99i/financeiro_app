@@ -9,6 +9,7 @@ import '../screens/despesas_screen.dart';
 import '../screens/receitas_screen.dart';
 import '../widgets/app_settings_scope.dart';
 
+// Widget do resumo financeiro com indicadores reordenaveis.
 class ResumoFinanceiroWidget extends StatefulWidget {
   final MenuStore menuStore;
   final ReceitasStore receitasStore;
@@ -36,13 +37,16 @@ class ResumoFinanceiroWidget extends StatefulWidget {
   });
 
   @override
+  // Cria o estado do resumo financeiro.
   State<ResumoFinanceiroWidget> createState() => _ResumoFinanceiroWidgetState();
 }
 
+// Estado do resumo financeiro com painel expansivel.
 class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
   bool _isExpanded = true;
 
   @override
+  // Monta a UI com indicadores e painel expansivel.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
     return AnimatedBuilder(
@@ -170,6 +174,7 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
     );
   }
 
+  // Resolve o valor exibido para cada item do menu.
   String _resolveValue(MenuItemConfig item) {
     if (item.kind == MenuItemKind.custom) {
       return item.customValue ?? '-';
@@ -194,6 +199,7 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
     }
   }
 
+  // Resolve a cor do badge de cada indicador.
   Color _resolveColor(MenuItemConfig item) {
     if (item.kind == MenuItemKind.custom) {
       return const Color(0xFF254A6A);
@@ -236,6 +242,7 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
     }
   }
 
+  // Resolve o titulo conforme configuracao de labels.
   String _resolveTitle(AppSettingsStore settings, MenuItemConfig item) {
     if (item.kind != MenuItemKind.metric || item.metric == null) {
       return item.title;
@@ -247,6 +254,7 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
     return item.title;
   }
 
+  // Resolve a navegacao para telas de detalhe.
   VoidCallback? _resolveTap(MenuItemConfig item) {
     if (item.kind != MenuItemKind.metric) {
       return null;
@@ -283,6 +291,7 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
     }
   }
 
+  // Exibe o dialogo para adicionar novos indicadores.
   void _showAddMenuDialog() {
     final titleController = TextEditingController();
     final valueController = TextEditingController();
@@ -423,6 +432,7 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
   }
 }
 
+// Linha de item com valor, cor e acoes.
 class _MenuItemRow extends StatelessWidget {
   final String title;
   final String value;
@@ -442,6 +452,7 @@ class _MenuItemRow extends StatelessWidget {
   });
 
   @override
+  // Monta a UI de cada item do resumo.
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -517,12 +528,14 @@ class _MenuItemRow extends StatelessWidget {
   }
 }
 
+// Card para adicionar novo item ao resumo.
 class _AddCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const _AddCard({super.key, required this.onTap});
 
   @override
+  // Monta o botao de adicionar item.
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,

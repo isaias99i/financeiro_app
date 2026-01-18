@@ -15,6 +15,7 @@ import '../widgets/resumo_financeiro_widget.dart';
 import '../widgets/aurora_scaffold.dart';
 import '../widgets/app_settings_scope.dart';
 
+// Tela principal com resumo e indicadores financeiros.
 class DashboardScreen extends StatefulWidget {
   final double reserva;
   final String userId;
@@ -22,9 +23,11 @@ class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key, required this.userId, this.reserva = 0.0});
 
   @override
+  // Cria o estado da tela do dashboard.
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
+// Estado do dashboard com cargas e filtros.
 class _DashboardScreenState extends State<DashboardScreen> {
   late final MenuStore _menuStore;
   late final ReceitasStore _receitasStore;
@@ -35,6 +38,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _forecastMonths = 12;
 
   @override
+  // Inicializa stores e carrega dados iniciais.
   void initState() {
     super.initState();
     _menuStore = MenuStore();
@@ -49,6 +53,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   @override
+  // Libera os stores ao sair da tela.
   void dispose() {
     _menuStore.dispose();
     _receitasStore.dispose();
@@ -59,6 +64,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   @override
+  // Monta a UI principal do dashboard.
   Widget build(BuildContext context) {
     return AuroraScaffold(
       appBar: AppBar(
@@ -164,10 +170,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // Retorna a data de um mes anterior.
   DateTime _monthOffset(DateTime base, int offset) {
     return DateTime(base.year, base.month - offset, 1);
   }
 
+  // Soma valores em uma janela de meses.
   double _sumForPeriod(
     DateTime base,
     int months,
@@ -180,6 +188,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return total;
   }
 
+  // Calcula variacao percentual entre meses.
   _Variation _buildVariation(double current, double previous) {
     if (previous.abs() < 0.01) {
       return const _Variation.unavailable();
@@ -189,6 +198,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return _Variation.available(diff: diff, percent: percent);
   }
 
+  // Constroi a projecao de saldo para os proximos meses.
   _ForecastData _buildForecast(DateTime start, int months) {
     final appStart = DateTime(2026, 1, 1);
     var base = DateTime(start.year, start.month, 1);
@@ -224,6 +234,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return _ForecastData(values: values, months: labels);
   }
 
+  // Abre a tela de configuracoes.
   void _openSettings() {
     Navigator.push(
       context,
@@ -238,6 +249,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // Atualiza todos os dados do dashboard.
   Future<void> _refreshAll() async {
     await Future.wait([
       _receitasStore.load(),
@@ -247,11 +259,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ]);
   }
 
+  // Desloga o usuario atual.
   Future<void> _signOut() async {
     await FirebaseAuth.instance.signOut();
   }
 }
 
+// Modelo interno com dados de projecao.
 class _ForecastData {
   final List<double> values;
   final List<DateTime> months;
@@ -262,6 +276,7 @@ class _ForecastData {
   });
 }
 
+// Periodos disponiveis para filtros de saldo.
 enum DashboardPeriod {
   month(1, 'Mes atual'),
   quarter(3, 'Ultimos 3 meses'),
@@ -273,6 +288,7 @@ enum DashboardPeriod {
   final String label;
 }
 
+// Conjunto de chips para selecionar periodo.
 class _PeriodChips extends StatelessWidget {
   final DashboardPeriod selected;
   final ValueChanged<DashboardPeriod> onSelected;
@@ -283,6 +299,7 @@ class _PeriodChips extends StatelessWidget {
   });
 
   @override
+  // Monta os chips de periodo.
   Widget build(BuildContext context) {
     return Wrap(
       spacing: 8,
@@ -298,6 +315,7 @@ class _PeriodChips extends StatelessWidget {
   }
 }
 
+// Chip individual de periodo.
 class _PeriodChip extends StatelessWidget {
   final String label;
   final bool isSelected;
@@ -310,6 +328,7 @@ class _PeriodChip extends StatelessWidget {
   });
 
   @override
+  // Monta o chip individual.
   Widget build(BuildContext context) {
     final gradient = LinearGradient(
       begin: Alignment.topLeft,
@@ -350,6 +369,7 @@ class _PeriodChip extends StatelessWidget {
   }
 }
 
+// Card principal de saldo e variacao.
 class _HeroSaldoCard extends StatelessWidget {
   final double saldoAtual;
   final double saldoPeriodo;
@@ -366,6 +386,7 @@ class _HeroSaldoCard extends StatelessWidget {
   });
 
   @override
+  // Monta o card de saldo principal.
   Widget build(BuildContext context) {
     final variationColor = variation.isPositive
         ? const Color(0xFF1FAF86)
@@ -445,6 +466,7 @@ class _HeroSaldoCard extends StatelessWidget {
   }
 }
 
+// Representa variacao percentual do saldo.
 class _Variation {
   final double diff;
   final double percent;
@@ -461,8 +483,10 @@ class _Variation {
   const _Variation.available({required this.diff, required this.percent})
       : isAvailable = true;
 
+  // Indica se a variacao e positiva.
   bool get isPositive => diff >= 0;
 
+  // Gera o label formatado da variacao.
   String get label {
     if (!isAvailable) return '--';
     final sign = diff >= 0 ? '+' : '-';
@@ -470,6 +494,7 @@ class _Variation {
   }
 }
 
+// Card com grafico de projecao de saldo.
 class _ForecastCard extends StatelessWidget {
   final int months;
   final List<double> values;
@@ -486,6 +511,7 @@ class _ForecastCard extends StatelessWidget {
   });
 
   @override
+  // Monta o card de projecao e slider.
   Widget build(BuildContext context) {
     if (values.isEmpty) {
       return Container(
@@ -622,6 +648,7 @@ class _ForecastCard extends StatelessWidget {
   }
 }
 
+// Painter do grafico de projecao.
 class _ForecastChartPainter extends CustomPainter {
   final List<double> values;
   final double min;
@@ -638,6 +665,7 @@ class _ForecastChartPainter extends CustomPainter {
   });
 
   @override
+  // Desenha o grafico de linha com pontos.
   void paint(Canvas canvas, Size size) {
     if (values.length < 2) return;
     final paint = Paint()
@@ -694,6 +722,7 @@ class _ForecastChartPainter extends CustomPainter {
   }
 
   @override
+  // Controla o repaint do grafico.
   bool shouldRepaint(covariant _ForecastChartPainter oldDelegate) {
     return oldDelegate.values != values ||
         oldDelegate.min != min ||
@@ -701,6 +730,7 @@ class _ForecastChartPainter extends CustomPainter {
         oldDelegate.color != color;
   }
 
+  // Desenha label de valores no grafico.
   void _drawPointLabel(
     Canvas canvas,
     Size size,

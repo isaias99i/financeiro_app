@@ -4,9 +4,11 @@ import '../data/settings_store.dart';
 import '../widgets/app_settings_scope.dart';
 import '../widgets/aurora_scaffold.dart';
 
+// Tela de escolha de tema e contraste.
 class AppearanceScreen extends StatelessWidget {
   const AppearanceScreen({super.key});
 
+  // Monta opcoes de tema e contraste.
   @override
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
@@ -64,6 +66,7 @@ class AppearanceScreen extends StatelessWidget {
     );
   }
 
+  // Rotulo do tema para exibicao.
   String _themeLabel(AppThemeStyle style) {
     return switch (style) {
       AppThemeStyle.aurora => 'Aurora',
@@ -72,6 +75,7 @@ class AppearanceScreen extends StatelessWidget {
     };
   }
 
+  // Rotulo do contraste para exibicao.
   String _contrastLabel(ContrastLevel level) {
     return switch (level) {
       ContrastLevel.normal => 'Normal',
@@ -80,6 +84,7 @@ class AppearanceScreen extends StatelessWidget {
   }
 }
 
+// Card generico de secao.
 class _SectionCard extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -91,6 +96,7 @@ class _SectionCard extends StatelessWidget {
     required this.child,
   });
 
+  // Layout padrao da secao.
   @override
   Widget build(BuildContext context) {
     return Container(

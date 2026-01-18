@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
+// Store de categorias de despesas do usuario.
 class CategoriesStore extends ChangeNotifier {
   CategoriesStore({
     required this.userId,
@@ -15,10 +16,13 @@ class CategoriesStore extends ChangeNotifier {
   final List<String> _categories = [];
   bool _isLoaded = false;
 
+  // Indica se as categorias foram carregadas.
   bool get isLoaded => _isLoaded;
+  // Lista imutavel de categorias.
   UnmodifiableListView<String> get categories =>
       UnmodifiableListView(_categories);
 
+  // Carrega categorias do Firestore.
   Future<void> load() async {
     _categories.clear();
     final doc = await _docRef().get();
@@ -39,6 +43,7 @@ class CategoriesStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Adiciona nova categoria.
   void addCategory(String name) {
     final normalized = name.trim();
     if (normalized.isEmpty) {
@@ -52,6 +57,7 @@ class CategoriesStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Atualiza o nome de uma categoria.
   void updateCategory(String previous, String next) {
     final normalized = next.trim();
     if (normalized.isEmpty) {
@@ -69,17 +75,20 @@ class CategoriesStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Remove uma categoria.
   void removeCategory(String name) {
     _categories.removeWhere((item) => item == name);
     _persist();
     notifyListeners();
   }
 
+  // Verifica se a categoria ja existe.
   bool _containsCategory(String name) {
     final target = name.toLowerCase();
     return _categories.any((item) => item.toLowerCase() == target);
   }
 
+  // Persiste categorias no Firestore.
   void _persist() {
     if (!_isLoaded) return;
     final payload = {
@@ -88,6 +97,7 @@ class CategoriesStore extends ChangeNotifier {
     _docRef().set(payload);
   }
 
+  // Lista padrao usada quando nao ha categorias salvas.
   List<String> _defaultCategories() {
     return const [
       'Alimentacao',
@@ -103,6 +113,7 @@ class CategoriesStore extends ChangeNotifier {
     ];
   }
 
+  // Referencia ao documento de categorias do usuario.
   DocumentReference<Map<String, dynamic>> _docRef() {
     return _firestore
         .collection('users')

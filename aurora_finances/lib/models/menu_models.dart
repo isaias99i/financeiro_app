@@ -1,7 +1,10 @@
+// Tipos de secao do menu.
 enum MenuSectionType { receitas, despesas }
 
+// Tipos de item do menu.
 enum MenuItemKind { metric, custom }
 
+// Metricas disponiveis no resumo.
 enum MenuMetric {
   receitas,
   despesas,
@@ -11,6 +14,7 @@ enum MenuMetric {
   segurancaAno,
 }
 
+// Titulo exibido para cada metrica.
 String menuMetricTitle(MenuMetric metric) {
   switch (metric) {
     case MenuMetric.receitas:
@@ -28,10 +32,12 @@ String menuMetricTitle(MenuMetric metric) {
   }
 }
 
+// Chave de identificacao para metrico custom.
 String menuMetricKey(MenuMetric metric) {
   return 'menuMetric.${metric.name}';
 }
 
+// Configuracao de item do menu.
 class MenuItemConfig {
   final String id;
   final MenuItemKind kind;
@@ -39,6 +45,7 @@ class MenuItemConfig {
   final String title;
   final String? customValue;
 
+  // Item baseado em metrica fixa.
   MenuItemConfig.metric({
     required this.id,
     required this.metric,
@@ -46,6 +53,7 @@ class MenuItemConfig {
   })  : kind = MenuItemKind.metric,
         customValue = null;
 
+  // Item com valor customizado pelo usuario.
   MenuItemConfig.custom({
     required this.id,
     required this.title,
@@ -54,6 +62,7 @@ class MenuItemConfig {
         metric = null;
 }
 
+// Configuracao de uma secao do menu.
 class MenuSectionConfig {
   final MenuSectionType type;
   final String title;
@@ -66,6 +75,7 @@ class MenuSectionConfig {
   });
 }
 
+// Entrada pronta para exibicao no menu.
 class MenuItemEntry {
   final MenuSectionType type;
   final MenuItemConfig item;

@@ -12,6 +12,7 @@ import '../widgets/aurora_scaffold.dart';
 import '../screens/categorias_screen.dart';
 import '../widgets/app_settings_scope.dart';
 
+// Tela de lancamentos detalhados de uma coluna.
 class DespesaColunaScreen extends StatefulWidget {
   final DespesasStore store;
   final CategoriesStore categoriesStore;
@@ -29,13 +30,16 @@ class DespesaColunaScreen extends StatefulWidget {
   });
 
   @override
+  // Cria o estado da tela de coluna.
   State<DespesaColunaScreen> createState() => _DespesaColunaScreenState();
 }
 
+// Estado da coluna com filtro por mes.
 class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
   late DateTime _selectedMonth;
 
   @override
+  // Inicializa o mes selecionado e categorias.
   void initState() {
     super.initState();
     _selectedMonth = DateTime(
@@ -49,6 +53,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
   }
 
   @override
+  // Monta a UI com lista de lancamentos.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
     final dateFormatter = settings.dateFormatter();
@@ -143,6 +148,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
     );
   }
 
+  // Filtra e ordena entradas do mes.
   List<ExpenseEntry> _entriesForMonth() {
     final entries = widget.store.entriesForColumn(widget.column);
     final filtered = entries
@@ -152,6 +158,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
     return filtered;
   }
 
+  // Abre o seletor de mes.
   Future<void> _pickMonth(BuildContext context) async {
     final picked = await _pickDate(
       context: context,
@@ -164,14 +171,17 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
     });
   }
 
+  // Abre dialogo para adicionar gasto.
   Future<void> _showAddDialog() async {
     await _showEntryDialog();
   }
 
+  // Abre dialogo para editar gasto.
   Future<void> _showEditDialog(ExpenseEntry entry) async {
     await _showEntryDialog(entry: entry);
   }
 
+  // Dialogo principal de adicionar/editar gasto.
   Future<void> _showEntryDialog({ExpenseEntry? entry}) async {
     final settings = AppSettingsScope.of(context);
     final reasonController = TextEditingController(text: entry?.reason ?? '');
@@ -417,6 +427,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
     );
   }
 
+  // Salva parcelas criando entradas futuras.
   void _saveInstallments({
     required ExpenseEntry? entry,
     required int count,
@@ -459,6 +470,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
     }
   }
 
+  // Calcula a data da parcela com ajuste de dia.
   DateTime _installmentDate(DateTime purchaseDate, int installmentIndex) {
     final targetMonth = DateTime(
       purchaseDate.year,
@@ -470,6 +482,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
     return DateTime(targetMonth.year, targetMonth.month, safeDay);
   }
 
+  // Gera o subtitulo exibido no card.
   String _subtitleForEntry(ExpenseEntry entry, DateFormat dateFormatter) {
     final reason = entry.reason.isEmpty ? 'Sem motivo' : entry.reason;
     if (entry.isInstallment) {
@@ -478,10 +491,12 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
     return '$reason - ${dateFormatter.format(entry.date)}';
   }
 
+  // Gera o proximo id de entrada.
   String _nextEntryId() {
     return widget.store.nextId();
   }
 
+  // Abre o seletor de data.
   Future<DateTime?> _pickDate({
     required BuildContext context,
     required DateTime initialDate,
@@ -498,11 +513,13 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
     );
   }
 
+  // Remove um gasto da coluna.
   void _removeEntry(ExpenseEntry entry) {
     widget.store.removeEntry(entry.id);
     _showSnack('Gasto removido');
   }
 
+  // Exibe snackbar com feedback rapido.
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -514,6 +531,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
     );
   }
 
+  // Abre a tela de categorias.
   void _openCategories() {
     Navigator.push(
       context,
@@ -524,6 +542,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
   }
 }
 
+// Cabecalho com total do mes e quantidade.
 class _HeaderSummary extends StatelessWidget {
   final String monthLabel;
   final String totalLabel;
@@ -536,6 +555,7 @@ class _HeaderSummary extends StatelessWidget {
   });
 
   @override
+  // Monta o cabecalho de resumo.
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -582,12 +602,14 @@ class _HeaderSummary extends StatelessWidget {
   }
 }
 
+// Estado vazio para coluna sem lancamentos.
 class _EmptyEntries extends StatelessWidget {
   final VoidCallback onAdd;
 
   const _EmptyEntries({required this.onAdd});
 
   @override
+  // Monta o card de estado vazio.
   Widget build(BuildContext context) {
     return Center(
       child: Container(

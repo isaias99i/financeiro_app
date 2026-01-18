@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../data/settings_store.dart';
 import 'app_settings_scope.dart';
 
+// Fundo com gradiente e blobs de luz.
 class AuroraBackground extends StatelessWidget {
   const AuroraBackground({super.key});
 
+  // Desenha fundo de acordo com o tema atual.
   @override
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
@@ -45,6 +47,7 @@ class AuroraBackground extends StatelessWidget {
   }
 }
 
+// Paleta de cores para cada tema.
 class _AuroraPalette {
   final List<Color> background;
   final Color glowA;
@@ -61,6 +64,7 @@ class _AuroraPalette {
   });
 }
 
+// Seleciona a paleta conforme configuracoes.
 _AuroraPalette _paletteFor(AppSettingsStore settings) {
   final contrastBoost = settings.contrastLevel == ContrastLevel.high ? 0.08 : 0.0;
   switch (settings.themeStyle) {
@@ -103,6 +107,7 @@ _AuroraPalette _paletteFor(AppSettingsStore settings) {
   }
 }
 
+// Elemento circular com gradiente para brilho.
 class _GlowBlob extends StatelessWidget {
   final Color color;
   final double size;
@@ -116,6 +121,7 @@ class _GlowBlob extends StatelessWidget {
     required this.opacity,
   });
 
+  // Posiciona o blob no fundo.
   @override
   Widget build(BuildContext context) {
     return Positioned(

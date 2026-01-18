@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'aurora_background.dart';
 
+// Scaffold padrao com fundo Aurora e padding correto.
 class AuroraScaffold extends StatelessWidget {
   final PreferredSizeWidget? appBar;
   final Widget body;
@@ -16,6 +17,7 @@ class AuroraScaffold extends StatelessWidget {
     this.floatingActionButtonLocation,
   });
 
+  // Monta o layout com background e area segura.
   @override
   Widget build(BuildContext context) {
     final mediaPadding = MediaQuery.of(context).padding;

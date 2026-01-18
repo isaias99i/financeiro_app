@@ -3,17 +3,21 @@ import 'package:flutter/material.dart';
 import '../data/categories_store.dart';
 import '../widgets/aurora_scaffold.dart';
 
+// Tela de gerenciamento de categorias.
 class CategoriasScreen extends StatefulWidget {
   final CategoriesStore store;
 
   const CategoriasScreen({super.key, required this.store});
 
   @override
+  // Cria o estado da tela de categorias.
   State<CategoriasScreen> createState() => _CategoriasScreenState();
 }
 
+// Estado da tela de categorias.
 class _CategoriasScreenState extends State<CategoriasScreen> {
   @override
+  // Carrega categorias ao iniciar.
   void initState() {
     super.initState();
     if (!widget.store.isLoaded) {
@@ -22,6 +26,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
   }
 
   @override
+  // Monta a lista de categorias.
   Widget build(BuildContext context) {
     return AuroraScaffold(
       appBar: AppBar(
@@ -88,6 +93,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
     );
   }
 
+  // Abre dialogo para adicionar/editar categoria.
   Future<void> _showCategoryDialog({String? category}) async {
     final controller = TextEditingController(text: category ?? '');
 
@@ -109,11 +115,13 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
     );
   }
 
+  // Remove uma categoria.
   void _removeCategory(String category) {
     widget.store.removeCategory(category);
   }
 }
 
+// Dialogo para criar/editar categoria.
 class _CategoryDialog extends StatelessWidget {
   final String title;
   final TextEditingController initialValue;
@@ -126,6 +134,7 @@ class _CategoryDialog extends StatelessWidget {
   });
 
   @override
+  // Monta o conteudo do dialogo.
   Widget build(BuildContext context) {
     final inputDecoration = InputDecoration(
       filled: true,
@@ -251,12 +260,14 @@ class _CategoryDialog extends StatelessWidget {
   }
 }
 
+// Estado vazio quando nao ha categorias.
 class _EmptyCategories extends StatelessWidget {
   final VoidCallback onAdd;
 
   const _EmptyCategories({required this.onAdd});
 
   @override
+  // Monta o estado vazio com CTA.
   Widget build(BuildContext context) {
     return Center(
       child: Container(

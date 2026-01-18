@@ -8,6 +8,7 @@ import '../models/carteira_models.dart';
 import '../utils/currency_input_formatter.dart';
 import '../widgets/app_settings_scope.dart';
 
+// Widget da carteira com lista de bancos e saldo total.
 class CarteiraWidget extends StatefulWidget {
   final CarteiraStore store;
   final double? expectedBalance;
@@ -22,6 +23,7 @@ class CarteiraWidget extends StatefulWidget {
   State<CarteiraWidget> createState() => _CarteiraWidgetState();
 }
 
+// Estado com ordenacao, edicao inline e expand/collapse.
 class _CarteiraWidgetState extends State<CarteiraWidget> {
   bool _isExpanded = false;
   _SortMode _sortMode = _SortMode.balanceDesc;
@@ -39,6 +41,7 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
     Color(0xFF2ECC71),
   ];
 
+  // Monta a UI da carteira com grafico e lista.
   @override
   Widget build(BuildContext context) {
     final format = AppSettingsScope.of(context).currencyFormatter();
@@ -169,6 +172,7 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
     );
   }
 
+  // Calcula status visual comparando saldo com o esperado.
   _StatusInfo? _buildStatus(
     double total,
     double? expected,
@@ -197,6 +201,7 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
     );
   }
 
+  // Ordena bancos conforme o modo selecionado.
   List<BankAccount> _sortedBanks(List<BankAccount> banks) {
     final list = List<BankAccount>.from(banks);
     switch (_sortMode) {
@@ -213,6 +218,7 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
     return list;
   }
 
+  // Controlador de nome por banco.
   TextEditingController _nameControllerFor(BankAccount bank) {
     return _nameControllers.putIfAbsent(
       bank.id,
@@ -220,6 +226,7 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
     );
   }
 
+  // Controlador de saldo por banco.
   TextEditingController _balanceControllerFor(
     BankAccount bank,
     NumberFormat formatter,
@@ -236,18 +243,21 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
     );
   }
 
+  // Inicia edicao inline.
   void _startInlineEdit(BankAccount bank) {
     setState(() {
       _editingIds.add(bank.id);
     });
   }
 
+  // Cancela edicao inline.
   void _cancelInlineEdit(BankAccount bank) {
     setState(() {
       _editingIds.remove(bank.id);
     });
   }
 
+  // Salva edicao inline no store.
   void _saveInlineEdit(BankAccount bank) {
     final settings = AppSettingsScope.of(context);
     final name = _nameControllerFor(bank).text.trim();
@@ -273,10 +283,12 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
     _showSnack(context, 'Banco atualizado');
   }
 
+  // Abre dialogo para adicionar banco.
   void _showAddBankDialog() {
     _showBankDialog();
   }
 
+  // Mostra mensagem rapida.
   void _showSnack(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -288,6 +300,7 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
     );
   }
 
+  // Dialogo para criar/editar banco.
   void _showBankDialog({BankAccount? existing}) {
     final rootContext = context;
     final nameController = TextEditingController(text: existing?.name ?? '');
@@ -409,6 +422,7 @@ class _CarteiraWidgetState extends State<CarteiraWidget> {
   }
 }
 
+// Card de banco com edicao e visualizacao.
 class _BankCard extends StatelessWidget {
   final BankAccount bank;
   final double totalBalance;
@@ -432,6 +446,7 @@ class _BankCard extends StatelessWidget {
     required this.onRemove,
   });
 
+  // Desenha o card com saldo e acoes.
   @override
   Widget build(BuildContext context) {
     final format = AppSettingsScope.of(context).currencyFormatter();
@@ -559,11 +574,13 @@ class _BankCard extends StatelessWidget {
   }
 }
 
+// Card de acao para adicionar banco.
 class _AddBankCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const _AddBankCard({required this.onTap});
 
+  // Renderiza o botao de adicionar.
   @override
   Widget build(BuildContext context) {
     return InkWell(
@@ -591,6 +608,7 @@ class _AddBankCard extends StatelessWidget {
   }
 }
 
+// Card com grafico de distribuicao.
 class _PieCard extends StatelessWidget {
   final List<BankAccount> banks;
   final double total;
@@ -602,6 +620,7 @@ class _PieCard extends StatelessWidget {
     required this.formatter,
   });
 
+  // Desenha o grafico de pizza.
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -652,6 +671,7 @@ class _PieCard extends StatelessWidget {
   }
 }
 
+// Painter do grafico de pizza.
 class _PieChartPainter extends CustomPainter {
   final List<BankAccount> banks;
   final double total;
@@ -661,6 +681,7 @@ class _PieChartPainter extends CustomPainter {
     required this.total,
   });
 
+  // Pinta os setores do grafico.
   @override
   void paint(Canvas canvas, Size size) {
     if (total <= 0) {
@@ -682,12 +703,14 @@ class _PieChartPainter extends CustomPainter {
 
   }
 
+  // Repaint quando os dados mudam.
   @override
   bool shouldRepaint(covariant _PieChartPainter oldDelegate) {
     return oldDelegate.banks != banks || oldDelegate.total != total;
   }
 }
 
+// Informacao visual do status de saldo.
 class _StatusInfo {
   final String label;
   final Color color;
@@ -698,6 +721,7 @@ class _StatusInfo {
   });
 }
 
+// Modos de ordenacao da carteira.
 enum _SortMode {
   balanceDesc,
   balanceAsc,

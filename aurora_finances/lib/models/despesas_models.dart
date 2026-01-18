@@ -1,3 +1,4 @@
+// Agrupamento de colunas de despesas.
 class ExpenseGroup {
   ExpenseGroup({
     required this.id,
@@ -9,12 +10,14 @@ class ExpenseGroup {
   String title;
   final List<ExpenseColumn> columns;
 
+  // Serializa o grupo para armazenamento.
   Map<String, dynamic> toJson() => {
         'id': id,
         'title': title,
         'columns': columns.map((c) => c.toJson()).toList(),
       };
 
+  // Reconstrui o grupo a partir do JSON.
   factory ExpenseGroup.fromJson(Map<String, dynamic> json) {
     final columnsJson = json['columns'] as List<dynamic>? ?? [];
     return ExpenseGroup(
@@ -27,6 +30,7 @@ class ExpenseGroup {
   }
 }
 
+// Coluna de despesas dentro de um grupo.
 class ExpenseColumn {
   ExpenseColumn({
     required this.id,
@@ -38,12 +42,14 @@ class ExpenseColumn {
   String title;
   bool requiresEntries;
 
+  // Serializa a coluna.
   Map<String, dynamic> toJson() => {
         'id': id,
         'title': title,
         'requiresEntries': requiresEntries,
       };
 
+  // Reconstrui a coluna a partir do JSON.
   factory ExpenseColumn.fromJson(Map<String, dynamic> json) {
     return ExpenseColumn(
       id: json['id'] as String,
@@ -53,6 +59,7 @@ class ExpenseColumn {
   }
 }
 
+// Lancamento detalhado de despesa.
 class ExpenseEntry {
   final String id;
   final String columnId;
@@ -76,6 +83,7 @@ class ExpenseEntry {
     this.purchaseDate,
   });
 
+  // Copia o lancamento alterando somente os campos informados.
   ExpenseEntry copyWith({
     DateTime? date,
     String? category,
@@ -98,9 +106,11 @@ class ExpenseEntry {
     );
   }
 
+  // Indica se o lancamento representa parcela.
   bool get isInstallment =>
       installmentCount != null && installmentIndex != null && purchaseDate != null;
 
+  // Serializa o lancamento.
   Map<String, dynamic> toJson() => {
         'id': id,
         'columnId': columnId,
@@ -113,6 +123,7 @@ class ExpenseEntry {
         'purchaseDate': purchaseDate?.millisecondsSinceEpoch,
       };
 
+  // Reconstrui o lancamento a partir do JSON.
   factory ExpenseEntry.fromJson(Map<String, dynamic> json) {
     return ExpenseEntry(
       id: json['id'] as String,

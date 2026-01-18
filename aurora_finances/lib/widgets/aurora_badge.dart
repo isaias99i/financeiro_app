@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+// Badge reutilizavel para indicadores pequenos.
 class AuroraBadge extends StatelessWidget {
   final String label;
   final EdgeInsetsGeometry padding;
@@ -18,6 +19,7 @@ class AuroraBadge extends StatelessWidget {
     this.borderColor = const Color(0x33FFFFFF),
   });
 
+  // Desenha o badge com label e cores customizadas.
   @override
   Widget build(BuildContext context) {
     return Container(

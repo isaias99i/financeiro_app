@@ -12,6 +12,7 @@ import '../widgets/aurora_badge.dart';
 import '../widgets/aurora_scaffold.dart';
 import '../widgets/app_settings_scope.dart';
 
+// Tela de despesas com grupos e colunas.
 class DespesasScreen extends StatefulWidget {
   final DespesasStore store;
   final CategoriesStore categoriesStore;
@@ -23,9 +24,11 @@ class DespesasScreen extends StatefulWidget {
   });
 
   @override
+  // Cria o estado da tela de despesas.
   State<DespesasScreen> createState() => _DespesasScreenState();
 }
 
+// Estado da tela de despesas com navegacao de meses.
 class _DespesasScreenState extends State<DespesasScreen> {
   static final DateTime _startDate = DateTime(2026, 1, 1);
 
@@ -35,6 +38,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
   late int _currentIndex;
 
   @override
+  // Inicializa stores e o controle de meses.
   void initState() {
     super.initState();
     if (!widget.store.isLoaded) {
@@ -49,6 +53,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
   }
 
   @override
+  // Libera controllers usados na tela.
   void dispose() {
     for (final controller in _simpleControllers.values) {
       controller.dispose();
@@ -58,6 +63,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
   }
 
   @override
+  // Monta a UI com grupos, colunas e totalizadores.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
     final monthFormatter = settings.monthYearFormatter();
@@ -179,6 +185,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
     );
   }
 
+  // Define o mes inicial exibido.
   DateTime _initialMonth() {
     final now = DateTime.now();
     final normalized = DateTime(now.year, now.month, 1);
@@ -188,16 +195,20 @@ class _DespesasScreenState extends State<DespesasScreen> {
     return normalized;
   }
 
+  // Calcula o deslocamento em meses.
   int _monthsBetween(DateTime start, DateTime end) {
     return (end.year - start.year) * 12 + (end.month - start.month);
   }
 
+  // Converte indice em data do mes.
   DateTime _monthFromIndex(int index) {
     return DateTime(_startDate.year, _startDate.month + index, 1);
   }
 
+  // Indica se e possivel voltar um mes.
   bool _canGoPrevious() => _currentIndex > 0;
 
+  // Navega para o mes anterior.
   void _previousMonth() {
     if (!_canGoPrevious()) return;
     _monthController.previousPage(
@@ -206,6 +217,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
     );
   }
 
+  // Navega para o proximo mes.
   void _nextMonth() {
     _monthController.nextPage(
       duration: const Duration(milliseconds: 250),
@@ -213,12 +225,14 @@ class _DespesasScreenState extends State<DespesasScreen> {
     );
   }
 
+  // Atualiza o mes selecionado e reseta inputs.
   void _setSelectedMonth(int index) {
     _currentIndex = index;
     _selectedMonth = _monthFromIndex(index);
     _resetSimpleControllers();
   }
 
+  // Reseta os controllers de valores fixos.
   void _resetSimpleControllers() {
     for (final controller in _simpleControllers.values) {
       controller.dispose();
@@ -226,6 +240,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
     _simpleControllers.clear();
   }
 
+  // Abre a tela de lancamentos da coluna.
   void _openColumnEntries(ExpenseGroup group, ExpenseColumn column) {
     Navigator.push(
       context,
@@ -241,6 +256,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
     );
   }
 
+  // Abre a tela de categorias.
   void _openCategories() {
     Navigator.push(
       context,
@@ -250,6 +266,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
     );
   }
 
+  // Retorna controller para coluna fixa por mes.
   TextEditingController _simpleControllerFor(
     DateTime month,
     ExpenseColumn column,
@@ -266,6 +283,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
     });
   }
 
+  // Aplica valor fixo a partir de um mes.
   void _applyFixedValueFromMonth(DateTime month, ExpenseColumn column, String value) {
     final parsed = parseCurrencyToDouble(value);
     final settings = AppSettingsScope.of(context);
@@ -286,11 +304,13 @@ class _DespesasScreenState extends State<DespesasScreen> {
     });
   }
 
+  // Atualiza valor simples da coluna no mes.
   void _updateSimpleValueCurrent(DateTime month, ExpenseColumn column, String value) {
     final parsed = parseCurrencyToDouble(value);
     widget.store.setValueForColumn(month, column, parsed);
   }
 
+  // Cria um novo grupo de despesas.
   Future<void> _addGroup() async {
     final title = await _promptForText(
       title: 'Novo grupo',
@@ -301,6 +321,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
     _showSnack('Grupo criado');
   }
 
+  // Edita o nome do grupo.
   Future<void> _editGroup(ExpenseGroup group) async {
     final title = await _promptForText(
       title: 'Editar grupo',
@@ -311,10 +332,12 @@ class _DespesasScreenState extends State<DespesasScreen> {
     widget.store.updateGroup(group, title.trim());
   }
 
+  // Remove um grupo e suas colunas.
   void _removeGroup(ExpenseGroup group) {
     widget.store.removeGroup(group);
   }
 
+  // Cria uma nova coluna em um grupo.
   Future<void> _addColumn() async {
     final result = await _promptForColumn();
     if (result == null) return;
@@ -326,6 +349,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
     _showSnack('Coluna adicionada');
   }
 
+  // Cria uma nova coluna para um grupo especifico.
   Future<void> _addColumnForGroup(ExpenseGroup group) async {
     final result = await _promptForColumn(group: group);
     if (result == null) return;
@@ -337,6 +361,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
     _showSnack('Coluna adicionada');
   }
 
+  // Edita o titulo da coluna.
   Future<void> _editColumn(ExpenseGroup group, ExpenseColumn column) async {
     final title = await _promptForText(
       title: 'Editar coluna',
@@ -347,10 +372,12 @@ class _DespesasScreenState extends State<DespesasScreen> {
     widget.store.updateColumn(group, column, title.trim());
   }
 
+  // Remove uma coluna de um grupo.
   void _removeColumn(ExpenseGroup group, ExpenseColumn column) {
     widget.store.removeColumn(group, column);
   }
 
+  // Exibe um dialogo simples de texto.
   Future<String?> _promptForText({
     required String title,
     required String label,
@@ -385,6 +412,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
     );
   }
 
+  // Exibe dialogo para criar coluna.
   Future<_ColumnInput?> _promptForColumn({ExpenseGroup? group}) async {
     final controller = TextEditingController();
     ExpenseGroup selectedGroup = group ?? widget.store.groups.first;
@@ -465,6 +493,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
     );
   }
 
+  // Exibe um snackbar com feedback rapido.
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -477,6 +506,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
   }
 }
 
+// Modelo interno para criar colunas.
 class _ColumnInput {
   _ColumnInput(
     this.group,
@@ -489,6 +519,7 @@ class _ColumnInput {
   final bool requiresEntries;
 }
 
+// Seletor de mes com paginação.
 class _MonthSelector extends StatelessWidget {
   final PageController controller;
   final DateFormat formatter;
@@ -505,6 +536,7 @@ class _MonthSelector extends StatelessWidget {
   });
 
   @override
+  // Monta o seletor de mes.
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -564,12 +596,14 @@ class _MonthSelector extends StatelessWidget {
   }
 }
 
+// Estado vazio quando nao ha grupos.
 class _EmptyState extends StatelessWidget {
   final VoidCallback onAddGroup;
 
   const _EmptyState({required this.onAddGroup});
 
   @override
+  // Monta o estado vazio com CTA.
   Widget build(BuildContext context) {
     return Center(
       child: Container(
@@ -602,6 +636,7 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
+// Card com resumo do mes e contadores.
 class _SummaryCard extends StatelessWidget {
   final String totalLabel;
   final int groupCount;
@@ -614,6 +649,7 @@ class _SummaryCard extends StatelessWidget {
   });
 
   @override
+  // Monta o card de resumo.
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -662,6 +698,7 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
+// Barra de acoes para criar grupos/colunas.
 class _ActionBar extends StatelessWidget {
   final VoidCallback onAddGroup;
   final VoidCallback? onAddColumn;
@@ -672,6 +709,7 @@ class _ActionBar extends StatelessWidget {
   });
 
   @override
+  // Monta os botoes de acao.
   Widget build(BuildContext context) {
     return Row(
       children: [
@@ -695,6 +733,7 @@ class _ActionBar extends StatelessWidget {
   }
 }
 
+// Card de grupo com colunas e acoes.
 class _GroupCard extends StatelessWidget {
   final ExpenseGroup group;
   final String totalLabel;
@@ -719,6 +758,7 @@ class _GroupCard extends StatelessWidget {
   });
 
   @override
+  // Monta o card do grupo.
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -841,6 +881,7 @@ class _GroupCard extends StatelessWidget {
   }
 }
 
+// Tile com resumo de coluna detalhada.
 class _ColumnSummaryTile extends StatelessWidget {
   final String title;
   final String totalLabel;
@@ -857,6 +898,7 @@ class _ColumnSummaryTile extends StatelessWidget {
   });
 
   @override
+  // Monta o tile de resumo da coluna.
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
@@ -914,6 +956,7 @@ class _ColumnSummaryTile extends StatelessWidget {
   }
 }
 
+// Tile de coluna com valor fixo editavel.
 class _ColumnValueTile extends StatelessWidget {
   final String title;
   final TextEditingController controller;
@@ -930,6 +973,7 @@ class _ColumnValueTile extends StatelessWidget {
   });
 
   @override
+  // Monta o tile de valor fixo.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
     return Container(
@@ -997,12 +1041,14 @@ class _ColumnValueTile extends StatelessWidget {
   }
 }
 
+// Rodape com total do mes.
 class _TotalFooter extends StatelessWidget {
   final String label;
 
   const _TotalFooter({required this.label});
 
   @override
+  // Monta o rodape de total.
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1032,6 +1078,7 @@ class _TotalFooter extends StatelessWidget {
   }
 }
 
+// Botao compacto para acoes de coluna.
 class _TinyIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -1039,6 +1086,7 @@ class _TinyIconButton extends StatelessWidget {
   const _TinyIconButton({required this.icon, required this.onTap});
 
   @override
+  // Monta o botao compacto.
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,

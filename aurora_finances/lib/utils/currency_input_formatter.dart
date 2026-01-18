@@ -1,7 +1,9 @@
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+// Formata entrada de moeda enquanto o usuario digita.
 class CurrencyInputFormatter extends TextInputFormatter {
+  // Configura locale e simbolo usados na formatacao.
   CurrencyInputFormatter({required this.locale, required this.symbol})
     : _formatter = NumberFormat.currency(locale: locale, symbol: symbol);
 
@@ -14,6 +16,7 @@ class CurrencyInputFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
+    // Mantem apenas digitos e aplica formatacao monetaria.
     final buffer = StringBuffer();
     for (final rune in newValue.text.runes) {
       if (rune >= 48 && rune <= 57) {
@@ -38,6 +41,7 @@ class CurrencyInputFormatter extends TextInputFormatter {
   }
 }
 
+// Converte um texto de moeda para double.
 double parseCurrencyToDouble(String input) {
   final cleaned = input.replaceAll(RegExp(r'[^0-9]'), '');
   if (cleaned.isEmpty) {

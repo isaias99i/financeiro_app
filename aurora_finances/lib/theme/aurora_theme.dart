@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../data/settings_store.dart';
 
+// Monta o tema principal com base nas preferencias do usuario.
 ThemeData buildAuroraTheme(AppSettingsStore settings) {
   final base = ThemeData.light(useMaterial3: true);
   final seedColor = switch (settings.themeStyle) {
@@ -42,6 +43,7 @@ ThemeData buildAuroraTheme(AppSettingsStore settings) {
   );
 }
 
+// Seleciona a fonte conforme a preferencia.
 TextTheme _fontFor(AppFontFamily family, TextTheme base) {
   return switch (family) {
     AppFontFamily.spaceGrotesk => GoogleFonts.spaceGroteskTextTheme(base),

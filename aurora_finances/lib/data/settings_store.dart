@@ -4,13 +4,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+// Estilos de tema disponiveis.
 enum AppThemeStyle { aurora, dusk, glacier }
+// Nivel de contraste do tema.
 enum ContrastLevel { normal, high }
+// Escalas de tipografia.
 enum TypographyScale { small, normal, large, xlarge }
+// Fontes preferidas do app.
 enum AppFontFamily { spaceGrotesk, manrope, outfit }
+// Formatos de data suportados.
 enum DateFormatStyle { dayMonthYear, monthDayYear, yearMonthDay }
 
+// Store de configuracoes persistidas no Firestore.
 class AppSettingsStore extends ChangeNotifier {
+  // Cria a store com Firestore opcional para testes.
   AppSettingsStore({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
@@ -28,8 +35,10 @@ class AppSettingsStore extends ChangeNotifier {
   final Map<String, int> metricColors = {};
 
   bool _isLoaded = false;
+  // Indica se as configuracoes ja foram carregadas.
   bool get isLoaded => _isLoaded;
 
+  // Carrega configuracoes do usuario logado.
   Future<void> loadForUser(String? userId) async {
     _userId = userId;
     if (userId == null) {
@@ -69,37 +78,44 @@ class AppSettingsStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Atualiza o tema e persiste.
   void updateTheme(AppThemeStyle style) {
     themeStyle = style;
     _persist();
   }
 
+  // Atualiza o contraste e persiste.
   void updateContrast(ContrastLevel level) {
     contrastLevel = level;
     _persist();
   }
 
+  // Atualiza a escala tipografica e persiste.
   void updateTypographyScale(TypographyScale scale) {
     typographyScale = scale;
     _persist();
   }
 
+  // Atualiza a fonte e persiste.
   void updateFontFamily(AppFontFamily family) {
     fontFamily = family;
     _persist();
   }
 
+  // Atualiza moeda e simbolo.
   void updateCurrency(String locale, String symbol) {
     currencyLocale = locale;
     currencySymbol = symbol;
     _persist();
   }
 
+  // Atualiza o formato de data.
   void updateDateFormat(DateFormatStyle style) {
     dateFormatStyle = style;
     _persist();
   }
 
+  // Atualiza o rotulo de metrica customizada.
   void updateMetricLabel(String metricKey, String label) {
     final normalized = label.trim();
     if (normalized.isEmpty) {
@@ -110,25 +126,30 @@ class AppSettingsStore extends ChangeNotifier {
     _persist();
   }
 
+  // Atualiza a cor associada a uma metrica.
   void updateMetricColor(String metricKey, Color color) {
     metricColors[metricKey] = color.toARGB32();
     _persist();
   }
 
+  // Retorna rotulo de metrica com fallback.
   String labelForMetric(String metricKey, String fallback) {
     return metricLabels[metricKey] ?? fallback;
   }
 
+  // Retorna cor de metrica com fallback.
   Color colorForMetric(String metricKey, Color fallback) {
     final stored = metricColors[metricKey];
     if (stored == null) return fallback;
     return Color(stored);
   }
 
+  // Formatter monetario baseado nas preferncias.
   NumberFormat currencyFormatter() {
     return NumberFormat.currency(locale: currencyLocale, symbol: currencySymbol);
   }
 
+  // Formatter de data baseado nas preferncias.
   DateFormat dateFormatter() {
     final pattern = switch (dateFormatStyle) {
       DateFormatStyle.dayMonthYear => 'dd/MM/yyyy',
@@ -138,18 +159,22 @@ class AppSettingsStore extends ChangeNotifier {
     return DateFormat(pattern, currencyLocale);
   }
 
+  // Formatter de mes/ano completo.
   DateFormat monthYearFormatter() {
     return DateFormat('MMMM yyyy', currencyLocale);
   }
 
+  // Formatter de mes/ano curto.
   DateFormat shortMonthYearFormatter() {
     return DateFormat('MMM yyyy', currencyLocale);
   }
 
+  // Formatter numerico mes/ano.
   DateFormat numericMonthYearFormatter() {
     return DateFormat('MM/yyyy', currencyLocale);
   }
 
+  // Escala de texto aplicada ao app.
   double textScaleFactor() {
     return switch (typographyScale) {
       TypographyScale.small => 0.92,
@@ -159,6 +184,7 @@ class AppSettingsStore extends ChangeNotifier {
     };
   }
 
+  // Persiste configuracoes no Firestore.
   void _persist() {
     if (!_isLoaded || _userId == null) return;
     final payload = jsonEncode({
@@ -177,6 +203,7 @@ class AppSettingsStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Converte string para enum de tema.
   AppThemeStyle _themeFromName(String? name) {
     return AppThemeStyle.values.firstWhere(
       (value) => value.name == name,
@@ -184,6 +211,7 @@ class AppSettingsStore extends ChangeNotifier {
     );
   }
 
+  // Converte string para enum de contraste.
   ContrastLevel _contrastFromName(String? name) {
     return ContrastLevel.values.firstWhere(
       (value) => value.name == name,
@@ -191,6 +219,7 @@ class AppSettingsStore extends ChangeNotifier {
     );
   }
 
+  // Converte string para enum de tipografia.
   TypographyScale _scaleFromName(String? name) {
     return TypographyScale.values.firstWhere(
       (value) => value.name == name,
@@ -198,6 +227,7 @@ class AppSettingsStore extends ChangeNotifier {
     );
   }
 
+  // Converte string para enum de fonte.
   AppFontFamily _fontFromName(String? name) {
     return AppFontFamily.values.firstWhere(
       (value) => value.name == name,
@@ -205,6 +235,7 @@ class AppSettingsStore extends ChangeNotifier {
     );
   }
 
+  // Converte string para enum de formato de data.
   DateFormatStyle _dateFromName(String? name) {
     return DateFormatStyle.values.firstWhere(
       (value) => value.name == name,
@@ -212,6 +243,7 @@ class AppSettingsStore extends ChangeNotifier {
     );
   }
 
+  // Referencia ao documento de configuracoes do usuario.
   DocumentReference<Map<String, dynamic>> _docRef() {
     return _firestore
         .collection('users')
@@ -220,6 +252,7 @@ class AppSettingsStore extends ChangeNotifier {
         .doc('data');
   }
 
+  // Restaura valores padrao.
   void _resetDefaults() {
     themeStyle = AppThemeStyle.aurora;
     contrastLevel = ContrastLevel.normal;

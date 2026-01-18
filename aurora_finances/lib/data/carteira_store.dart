@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/carteira_models.dart';
 
+// Store da carteira (contas bancarias) do usuario.
 class CarteiraStore extends ChangeNotifier {
   CarteiraStore({
     required this.userId,
@@ -18,19 +19,24 @@ class CarteiraStore extends ChangeNotifier {
   bool _isLoaded = false;
   int _idCounter = 0;
 
+  // Indica se os dados foram carregados.
   bool get isLoaded => _isLoaded;
 
+  // Lista imutavel de contas.
   UnmodifiableListView<BankAccount> get banks => UnmodifiableListView(_banks);
 
+  // Soma do saldo total das contas.
   double get totalBalance =>
       _banks.fold(0.0, (total, bank) => total + bank.balance);
 
+  // Adiciona uma conta bancaria.
   void addBank(BankAccount bank) {
     _banks.add(bank);
     _persist();
     notifyListeners();
   }
 
+  // Atualiza uma conta bancaria.
   void updateBank(String id, BankAccount updated) {
     final index = _banks.indexWhere((bank) => bank.id == id);
     if (index == -1) {
@@ -41,17 +47,20 @@ class CarteiraStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Remove uma conta bancaria.
   void removeBank(String id) {
     _banks.removeWhere((bank) => bank.id == id);
     _persist();
     notifyListeners();
   }
 
+  // Gera id unico para novas contas.
   String nextId() {
     _idCounter += 1;
     return '${DateTime.now().microsecondsSinceEpoch}_$_idCounter';
   }
 
+  // Carrega contas do Firestore.
   Future<void> load() async {
     _banks.clear();
     final doc = await _docRef().get();
@@ -69,6 +78,7 @@ class CarteiraStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Persiste contas no Firestore.
   void _persist() {
     if (!_isLoaded) {
       return;
@@ -79,6 +89,7 @@ class CarteiraStore extends ChangeNotifier {
     _docRef().set(payload);
   }
 
+  // Referencia ao documento da carteira do usuario.
   DocumentReference<Map<String, dynamic>> _docRef() {
     return _firestore
         .collection('users')

@@ -5,10 +5,12 @@ import '../models/menu_models.dart';
 import '../widgets/app_settings_scope.dart';
 import '../widgets/aurora_scaffold.dart';
 
+// Tela de rotulos e cores dos indicadores.
 class LabelsColorsScreen extends StatelessWidget {
   const LabelsColorsScreen({super.key});
 
   @override
+  // Monta o editor de rotulos e cores.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
 
@@ -37,6 +39,7 @@ class LabelsColorsScreen extends StatelessWidget {
   }
 }
 
+// Editor de rotulo e cor por indicador.
 class _MetricEditor extends StatefulWidget {
   final MenuMetric metric;
   final AppSettingsStore settings;
@@ -47,13 +50,16 @@ class _MetricEditor extends StatefulWidget {
   });
 
   @override
+  // Cria o estado do editor do indicador.
   State<_MetricEditor> createState() => _MetricEditorState();
 }
 
+// Estado do editor de indicador.
 class _MetricEditorState extends State<_MetricEditor> {
   late final TextEditingController _controller;
 
   @override
+  // Inicializa o controller do rotulo.
   void initState() {
     super.initState();
     _controller = TextEditingController(
@@ -65,6 +71,7 @@ class _MetricEditorState extends State<_MetricEditor> {
   }
 
   @override
+  // Atualiza o texto quando muda o indicador.
   void didUpdateWidget(covariant _MetricEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.metric != widget.metric) {
@@ -76,12 +83,14 @@ class _MetricEditorState extends State<_MetricEditor> {
   }
 
   @override
+  // Libera o controller do rotulo.
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
   @override
+  // Monta o card de edicao do indicador.
   Widget build(BuildContext context) {
     final key = menuMetricKey(widget.metric);
     final fallbackColor = _defaultMetricColor(widget.metric);
@@ -154,6 +163,7 @@ class _MetricEditorState extends State<_MetricEditor> {
     );
   }
 
+  // Define a cor padrao para cada indicador.
   Color _defaultMetricColor(MenuMetric metric) {
     return switch (metric) {
       MenuMetric.receitas => const Color(0xFF1FAF86),
@@ -166,6 +176,7 @@ class _MetricEditorState extends State<_MetricEditor> {
   }
 }
 
+// Card de secao para agrupar edicoes.
 class _SectionCard extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -178,6 +189,7 @@ class _SectionCard extends StatelessWidget {
   });
 
   @override
+  // Monta o card de secao.
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),

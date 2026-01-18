@@ -2,6 +2,7 @@ class InvoiceInstallmentInfo {
   final int index;
   final int count;
 
+  // Representa a parcela atual e o total de parcelas.
   const InvoiceInstallmentInfo({
     required this.index,
     required this.count,
@@ -14,6 +15,7 @@ class InvoiceParsedItem {
   final double amount;
   final InvoiceInstallmentInfo? installment;
 
+  // Item parseado da fatura (data, descricao, valor).
   const InvoiceParsedItem({
     required this.date,
     required this.description,
@@ -63,6 +65,7 @@ class InvoiceParser {
   };
 
   static List<InvoiceParsedItem> parse(String text, {required DateTime referenceDate}) {
+    // Faz parsing linha a linha com suporte a multiline (descricao + valor).
     final lines = text
         .split('\n')
         .map((line) => line.trim())
@@ -123,10 +126,12 @@ class InvoiceParser {
   }
 
   static DateTime? _parseDate(String line, DateTime referenceDate) {
+    // Tenta data numerica e data PT-BR (ex.: 12 de nov. 2025).
     return _parseNumericDate(line, referenceDate) ?? _parsePtDate(line);
   }
 
   static DateTime? _parseNumericDate(String line, DateTime referenceDate) {
+    // Datas no formato 12/11/2025 ou 12-11-25.
     final match = _dateNumeric.firstMatch(line);
     if (match == null) return null;
     final day = int.tryParse(match.group(1) ?? '');
@@ -153,6 +158,7 @@ class InvoiceParser {
   }
 
   static DateTime? _parsePtDate(String line) {
+    // Datas PT-BR com mes abreviado ou por extenso.
     final match = _datePt.firstMatch(line);
     if (match == null) return null;
     final day = int.tryParse(match.group(1) ?? '');
@@ -168,6 +174,7 @@ class InvoiceParser {
   }
 
   static double? _parseAmount(String line) {
+    // Extrai valor monetario, respeitando sinais + e -.
     final matches = _amountRegex.allMatches(line).toList();
     if (matches.isEmpty) return null;
     final match = matches.last;
@@ -182,6 +189,7 @@ class InvoiceParser {
   }
 
   static InvoiceInstallmentInfo? _parseInstallment(String line) {
+    // Captura padroes de parcela como "01/12" ou "01 de 12".
     final match = _installmentSlash.firstMatch(line) ?? _installmentWord.firstMatch(line);
     if (match == null) return null;
     final index = int.tryParse(match.group(1) ?? '');
@@ -197,6 +205,7 @@ class InvoiceParser {
     DateTime date,
     InvoiceInstallmentInfo? installment,
   ) {
+    // Usa a segunda coluna quando o PDF vem em colunas.
     final columns = _splitColumns(line);
     if (columns.length >= 2) {
       return columns[1].trim();
@@ -205,6 +214,7 @@ class InvoiceParser {
   }
 
   static String _stripAmount(String line) {
+    // Remove data e valor para restar somente a descricao.
     var cleaned = line;
     cleaned = cleaned.replaceFirst(_dateNumeric, '');
     cleaned = cleaned.replaceFirst(_datePt, '');
@@ -215,6 +225,7 @@ class InvoiceParser {
   }
 
   static bool _shouldSkip(String line) {
+    // Ignora cabecalhos e linhas que nao sao lancamentos.
     final normalized = line.toLowerCase();
     if (normalized.startsWith('data movimentacao')) return true;
     if (normalized.startsWith('total ')) return true;
@@ -226,6 +237,7 @@ class InvoiceParser {
   }
 
   static List<String> _splitColumns(String line) {
+    // PDFs costumam separar colunas com espacos duplos.
     return line.split(RegExp(r'\s{2,}')).where((part) => part.trim().isNotEmpty).toList();
   }
 

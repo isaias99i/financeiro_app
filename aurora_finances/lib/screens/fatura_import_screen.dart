@@ -21,6 +21,7 @@ class FaturaImportScreen extends StatefulWidget {
   final DespesasStore despesasStore;
   final CategoriesStore categoriesStore;
 
+  // Tela de importacao de faturas (PDF) com OCR e revisao manual.
   const FaturaImportScreen({
     super.key,
     required this.despesasStore,
@@ -40,6 +41,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   String? _error;
   String? _pdfPassword;
 
+  // Garante dados carregados para dropdowns e categorias.
   @override
   void initState() {
     super.initState();
@@ -53,6 +55,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
 
   @override
   void dispose() {
+    // Libera recursos do OCR e controladores dos drafts.
     _textRecognizer.close();
     for (final entry in _entries) {
       entry.dispose();
@@ -62,6 +65,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Monta a tela principal e mantem estado do filtro de cartao.
     final settings = AppSettingsScope.of(context);
     final categories = widget.categoriesStore.categories.toList();
     final options = _columnOptions();
@@ -117,6 +121,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   Widget _buildCardSection(List<_ColumnOption> options) {
+    // Seleciona a coluna (cartao) de destino das despesas importadas.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -150,6 +155,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   Widget _buildPdfSection() {
+    // Area para selecionar PDF e iniciar processamento.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -182,6 +188,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   InputDecoration _fieldDecoration(String label) {
+    // Estilo padrao para campos de texto editaveis.
     return InputDecoration(
       labelText: label,
       labelStyle: const TextStyle(color: Colors.white),
@@ -201,6 +208,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   InputDecoration _dropdownDecoration(String label) {
+    // Estilo padrao para dropdowns com label fixo.
     return InputDecoration(
       labelText: label,
       labelStyle: const TextStyle(color: Colors.white),
@@ -219,6 +227,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   List<_ColumnOption> _columnOptions() {
+    // Lista apenas colunas que aceitam lancamentos detalhados.
     final options = <_ColumnOption>[];
     for (final group in widget.despesasStore.groups) {
       for (final column in group.columns) {
@@ -230,6 +239,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   Future<void> _pickPdf() async {
+    // Seleciona PDF no dispositivo e pede senha se necessario.
     setState(() {
       _error = null;
     });
@@ -252,6 +262,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   Future<void> _processPdf(String pdfPath, {String? password}) async {
+    // Extrai texto do PDF ou usa OCR como fallback.
     setState(() {
       _isProcessing = true;
       _entries.clear();
@@ -306,6 +317,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   String? _extractPdfText(String pdfPath, String? password) {
+    // Extrai texto diretamente do PDF (quando ha texto selecionavel).
     try {
       final document = sfpdf.PdfDocument(
         inputBytes: File(pdfPath).readAsBytesSync(),
@@ -327,6 +339,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
     String pdfPath, {
     String? password,
   }) async {
+    // Renderiza paginas em imagem e roda OCR local.
     final tempDir = await getTemporaryDirectory();
     final document = await PdfDocument.openFile(
       pdfPath,
@@ -364,6 +377,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   Future<void> _cleanupTempImages(Directory tempDir) async {
+    // Remove imagens temporarias geradas pelo OCR.
     try {
       final files = tempDir
           .listSync()
@@ -378,6 +392,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   Future<String?> _promptForPassword() async {
+    // Solicita senha do PDF se for protegido.
     final controller = TextEditingController(text: _pdfPassword ?? '');
     final result = await showDialog<String?>(
       context: context,
@@ -411,6 +426,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   Widget _buildEntriesList(AppSettingsStore settings, List<String> categories) {
+    // Lista de lancamentos detectados para edicao manual.
     if (_entries.isEmpty) {
       return const Text('Nenhum lancamento identificado.');
     }
@@ -463,6 +479,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   Future<void> _pickEntryDate(_DraftEntry entry) async {
+    // Atualiza a data do lancamento.
     final picked = await showDatePicker(
       context: context,
       initialDate: entry.date,
@@ -474,6 +491,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   void _removeEntry(int index) {
+    // Remove um draft da lista.
     setState(() {
       final entry = _entries.removeAt(index);
       entry.dispose();
@@ -481,6 +499,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   Future<void> _saveEntries(AppSettingsStore settings) async {
+    // Persiste lancamentos na coluna selecionada.
     final column = _selectedColumn?.column;
     if (column == null) {
       _showSnack('Selecione a coluna do cartao.');
@@ -516,6 +535,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   void _addInstallments(_DraftEntry entry, String columnId) {
+    // Gera parcelas futuras quando o item eh parcelado.
     final count = entry.installmentCount;
     final index = entry.installmentIndex;
     for (var i = index; i <= count; i++) {
@@ -536,6 +556,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   DateTime _installmentDate(DateTime purchaseDate, int installmentIndex) {
+    // Calcula a data de cada parcela usando o dia mais seguro do mes.
     final targetMonth = DateTime(
       purchaseDate.year,
       purchaseDate.month + (installmentIndex - 1),
@@ -547,6 +568,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   void _showSnack(String message) {
+    // Feedback rapido na tela.
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
@@ -584,6 +606,7 @@ class _DraftEntry {
     InvoiceParsedItem item, {
     required String category,
   }) {
+    // Converte o parsed item em draft editavel.
     final amountText = item.amount.toStringAsFixed(2);
     final installmentInfo = item.installment;
     final isInstallment = installmentInfo != null && installmentInfo.count > 1;
@@ -606,6 +629,7 @@ class _DraftEntry {
   }
 
   void syncControllers(AppSettingsStore settings) {
+    // Sincroniza valores editados no formulario.
     reason = reasonController.text.trim();
     amountValue = parseCurrencyToDouble(amountController.text);
     final count = int.tryParse(installmentCountController.text) ?? 1;
@@ -618,6 +642,7 @@ class _DraftEntry {
   }
 
   void dispose() {
+    // Libera controladores de texto.
     reasonController.dispose();
     amountController.dispose();
     installmentCountController.dispose();
@@ -629,6 +654,7 @@ class _ColumnOption {
   final ExpenseGroup group;
   final ExpenseColumn column;
 
+  // Identifica uma coluna de destino (grupo + coluna).
   const _ColumnOption({required this.group, required this.column});
 
   @override
@@ -674,6 +700,7 @@ class _EntryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Card visual para revisar e editar cada lancamento.
     final moneyFormatter = settings.currencyFormatter();
     final categoryList = categories.isEmpty ? ['Outros'] : categories.toList();
     if (entry.category.isNotEmpty && !categoryList.contains(entry.category)) {

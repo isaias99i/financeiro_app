@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import '../widgets/aurora_scaffold.dart';
 
+// Tela de login e cadastro com provedores sociais.
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
@@ -11,6 +12,7 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
+// Estado com validacao simples e carregamento.
 class _AuthScreenState extends State<AuthScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -18,6 +20,7 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _isBusy = false;
   String? _error;
 
+  // Libera controladores de texto.
   @override
   void dispose() {
     _emailController.dispose();
@@ -25,6 +28,7 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
+  // Monta UI de login/cadastro.
   @override
   Widget build(BuildContext context) {
     return AuroraScaffold(
@@ -122,6 +126,7 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
+  // Estilo padrao dos inputs.
   InputDecoration _inputDecoration(String label) {
     return InputDecoration(
       labelText: label,
@@ -138,6 +143,7 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
+  // Alterna entre login e cadastro.
   void _toggleMode() {
     setState(() {
       _isLogin = !_isLogin;
@@ -145,6 +151,7 @@ class _AuthScreenState extends State<AuthScreen> {
     });
   }
 
+  // Autentica via email/senha.
   Future<void> _handleEmailPassword() async {
     setState(() {
       _isBusy = true;
@@ -175,6 +182,7 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  // Autentica via Google.
   Future<void> _handleGoogleSignIn() async {
     setState(() {
       _isBusy = true;
@@ -202,6 +210,7 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  // Autentica via Microsoft.
   Future<void> _handleMicrosoftSignIn() async {
     setState(() {
       _isBusy = true;

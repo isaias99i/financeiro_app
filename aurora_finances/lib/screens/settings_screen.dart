@@ -21,6 +21,7 @@ class SettingsScreen extends StatefulWidget {
   final DespesasStore despesasStore;
   final CarteiraStore carteiraStore;
 
+  // Tela principal de configuracoes do app.
   const SettingsScreen({
     super.key,
     required this.categoriesStore,
@@ -36,6 +37,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _isBusy = false;
 
+  // Monta a UI principal das configuracoes.
   @override
   Widget build(BuildContext context) {
     return AuroraScaffold(
@@ -76,6 +78,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildDespesasSection(int categoriesCount) {
+    // Secao com itens de despesas e categorias.
     return _SettingsSection(
       title: 'Despesas',
       children: [
@@ -111,6 +114,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildAppearanceSection() {
+    // Secao de aparencia e tipografia.
     return _SettingsSection(
       title: 'Aparencia',
       children: [
@@ -145,6 +149,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildFormattingSection() {
+    // Secao de moeda e formato de data.
     return _SettingsSection(
       title: 'Moeda e formato',
       children: [
@@ -179,6 +184,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildDataSection() {
+    // Secao de dados (importacao e recursos futuros).
     return _SettingsSection(
       title: 'Dados',
       children: [
@@ -215,6 +221,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildAccountSection() {
+    // Secao de conta e gerenciamento de dados.
     return _SettingsSection(
       title: 'Conta e dados',
       children: [
@@ -237,6 +244,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _confirmReset({required bool deleteAccount}) async {
+    // Confirma a acao antes de apagar dados ou excluir conta.
     final title = deleteAccount ? 'Excluir conta e dados?' : 'Redefinir dados do app?';
     final message = deleteAccount
         ? 'Essa acao remove todos os dados do Firestore e exclui sua conta.'
@@ -263,6 +271,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _clearUserData({required bool deleteAccount}) async {
+    // Limpa dados no Firestore e opcionalmente exclui a conta.
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       _showMessage('Nenhum usuario logado.');
@@ -312,6 +321,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showMessage(String message) {
+    // Feedback rapido para o usuario.
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
@@ -322,6 +332,7 @@ class _SettingsHero extends StatelessWidget {
   final String title;
   final String subtitle;
 
+  // Cabecalho visual das configuracoes.
   const _SettingsHero({
     required this.title,
     required this.subtitle,
@@ -384,6 +395,7 @@ class _SettingsSection extends StatelessWidget {
   final String title;
   final List<Widget> children;
 
+  // Agrupador visual para itens de configuracao.
   const _SettingsSection({
     required this.title,
     required this.children,
@@ -437,6 +449,7 @@ class _SettingsItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Item clicavel padrao das configuracoes.
     final content = ListTile(
       leading: Container(
         width: 36,
