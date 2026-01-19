@@ -96,7 +96,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final now = DateTime.now();
           final receitasMes = _receitasStore.totalForMonth(now);
           final despesasMes = _despesasStore.totalForMonth(now);
-          final double saldoMensal = receitasMes - despesasMes;
+          final double saldoMensal = receitasMes + despesasMes;
           final double saldoAposReserva = saldoMensal - widget.reserva;
           final double saldoAtual = _carteiraStore.totalBalance;
           final int periodMonths = _period.months;
