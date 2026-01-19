@@ -1040,23 +1040,6 @@ class _GroupCard extends StatelessWidget {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     buildDefaultDragHandles: false,
-                    // Remove o fundo escuro do item arrastado.
-                    proxyDecorator: (child, index, animation) {
-                      return Builder(
-                        builder: (context) {
-                          final tokens = AppThemeTokens.of(context);
-                          return Material(
-                            color: Colors.transparent,
-                            elevation: 4,
-                            shadowColor: tokens.shadow,
-                            borderRadius: BorderRadius.circular(
-                              AppLayout.radiusMd,
-                            ),
-                            child: child,
-                          );
-                        },
-                      );
-                    },
                     itemCount: group.columns.length,
                     onReorder: onReorderColumns,
                     itemBuilder: (context, index) {

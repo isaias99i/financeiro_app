@@ -72,6 +72,11 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
             tooltip: 'Alterar mes',
           ),
           IconButton(
+            onPressed: _confirmClearMonthEntries,
+            icon: const Icon(Icons.delete_sweep),
+            tooltip: 'Limpar movimentacoes do mes',
+          ),
+          IconButton(
             onPressed: _openCategories,
             icon: const Icon(Icons.category),
             tooltip: 'Categorias',
@@ -156,7 +161,11 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
     final filtered = entries
         .where((entry) => isSameMonth(entry.date, _selectedMonth))
         .toList();
-    filtered.sort((a, b) => b.date.compareTo(a.date));
+    filtered.sort((a, b) {
+      final aDate = a.purchaseDate ?? a.date;
+      final bDate = b.purchaseDate ?? b.date;
+      return aDate.compareTo(bDate);
+    });
     return filtered;
   }
 
@@ -173,6 +182,47 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
     });
   }
 
+  // Confirma a limpeza das movimentacoes do mes selecionado.
+  Future<void> _confirmClearMonthEntries() async {
+    final settings = AppSettingsScope.of(context);
+    final monthLabel = settings.monthYearFormatter().format(_selectedMonth);
+    final entries = _entriesForMonth();
+    if (entries.isEmpty) {
+      _showSnack('Nao ha movimentacoes neste mes.');
+      return;
+    }
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Limpar movimentacoes'),
+          content: Text('Remover todas as movimentacoes de $monthLabel?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Remover'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirm != true) return;
+    _clearMonthEntries(entries);
+  }
+
+  // Remove todas as movimentacoes do mes atual.
+  void _clearMonthEntries(List<ExpenseEntry> entries) {
+    final ids = entries.map((entry) => entry.id).toList();
+    for (final id in ids) {
+      widget.store.removeEntry(id);
+    }
+    _showSnack('Movimentacoes removidas.');
+  }
+
   // Abre dialogo para adicionar gasto.
   Future<void> _showAddDialog() async {
     await _showEntryDialog();
@@ -187,11 +237,13 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
   Future<void> _showEntryDialog({ExpenseEntry? entry}) async {
     final settings = AppSettingsScope.of(context);
     final reasonController = TextEditingController(text: entry?.reason ?? '');
+    final initialAmount = entry?.amount ?? 0.0;
     final amountController = TextEditingController(
-      text: entry != null ? entry.amount.toStringAsFixed(2) : '',
+      text: entry != null ? initialAmount.abs().toStringAsFixed(2) : '',
     );
     DateTime selectedDate = entry?.date ?? _selectedMonth;
     bool isInstallment = entry?.isInstallment ?? false;
+    bool isPositive = entry != null ? initialAmount >= 0 : false;
     final installmentCountController = TextEditingController(
       text: entry?.installmentCount?.toString() ?? '1',
     );
@@ -285,6 +337,26 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                       decoration: const InputDecoration(labelText: 'Valor'),
                     ),
                     const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        ChoiceChip(
+                          label: const Text('Despesa (-)'),
+                          selected: !isPositive,
+                          onSelected: (_) {
+                            setState(() => isPositive = false);
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        ChoiceChip(
+                          label: const Text('Credito (+)'),
+                          selected: isPositive,
+                          onSelected: (_) {
+                            setState(() => isPositive = true);
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Compra parcelada'),
@@ -345,14 +417,16 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                         alignment: Alignment.centerLeft,
                         child: TextButton.icon(
                           icon: const Icon(Icons.calendar_today),
-                          label: Text(settings.dateFormatter().format(selectedDate)),
+                          label: Text(
+                            'Data da compra: ${settings.dateFormatter().format(purchaseDate)}',
+                          ),
                           onPressed: () async {
                             final picked = await _pickDate(
                               context: context,
-                              initialDate: selectedDate,
+                              initialDate: purchaseDate,
                             );
                             if (picked != null) {
-                              setState(() => selectedDate = picked);
+                              setState(() => purchaseDate = picked);
                             }
                           },
                         ),
@@ -374,6 +448,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                     if (amount <= 0) {
                       return;
                     }
+                    final signedAmount = isPositive ? amount : -amount;
 
                     if (isInstallment) {
                       final count = int.tryParse(installmentCountController.text) ?? 1;
@@ -386,11 +461,13 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                         count: count,
                         index: index,
                         purchaseDate: purchaseDate,
-                        amount: amount,
+                        amount: signedAmount,
                         category: selectedCategory ?? '',
                         reason: reasonController.text.trim(),
                       );
                     } else {
+                      final nextPurchaseDate = purchaseDate;
+                      final clearInstallments = entry?.isInstallment == true;
                       if (entry == null) {
                         widget.store.addEntry(
                           ExpenseEntry(
@@ -399,7 +476,8 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                             date: selectedDate,
                             category: selectedCategory ?? '',
                             reason: reasonController.text.trim(),
-                            amount: amount,
+                            amount: signedAmount,
+                            purchaseDate: nextPurchaseDate,
                           ),
                         );
                       } else {
@@ -409,10 +487,12 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                             date: selectedDate,
                             category: selectedCategory ?? '',
                             reason: reasonController.text.trim(),
-                            amount: amount,
-                            installmentCount: null,
-                            installmentIndex: null,
-                            purchaseDate: null,
+                            amount: signedAmount,
+                            installmentCount:
+                                clearInstallments ? null : entry.installmentCount,
+                            installmentIndex:
+                                clearInstallments ? null : entry.installmentIndex,
+                            purchaseDate: nextPurchaseDate,
                           ),
                         );
                       }
@@ -444,7 +524,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
       widget.store.updateEntry(
         entry.id,
         entry.copyWith(
-          date: _installmentDate(purchaseDate, index),
+          date: entry.date,
           category: category,
           reason: reason,
           amount: amount,
@@ -489,9 +569,11 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
   String _subtitleForEntry(ExpenseEntry entry, DateFormat dateFormatter) {
     final reason = entry.reason.isEmpty ? 'Sem motivo' : entry.reason;
     if (entry.isInstallment) {
-      return '$reason - Parcela ${entry.installmentIndex}/${entry.installmentCount} - ${dateFormatter.format(entry.date)}';
+      final purchaseDate = entry.purchaseDate ?? entry.date;
+      return '$reason - Parcela ${entry.installmentIndex}/${entry.installmentCount} - ${dateFormatter.format(purchaseDate)}';
     }
-    return '$reason - ${dateFormatter.format(entry.date)}';
+    final purchaseDate = entry.purchaseDate ?? entry.date;
+    return '$reason - ${dateFormatter.format(purchaseDate)}';
   }
 
   // Gera o proximo id de entrada.

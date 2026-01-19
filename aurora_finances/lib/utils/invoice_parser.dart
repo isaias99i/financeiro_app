@@ -94,6 +94,7 @@ class InvoiceParser {
 
       final amount = _parseAmount(line);
       if (currentDate != null && amount != null) {
+        currentInstallment ??= _parseInstallment(line);
         var description = currentDescription ?? '';
         if (description.isEmpty) {
           description = pendingDescription ?? _stripAmount(line);
@@ -117,6 +118,9 @@ class InvoiceParser {
       }
 
       if (date == null && amount == null) {
+        if (currentDate != null && currentInstallment == null) {
+          currentInstallment = _parseInstallment(line);
+        }
         if (currentDate != null && (currentDescription == null || currentDescription.isEmpty)) {
           pendingDescription ??= line;
         }
@@ -175,7 +179,12 @@ class InvoiceParser {
 
   static double? _parseAmount(String line) {
     // Extrai valor monetario, respeitando sinais + e -.
-    final matches = _amountRegex.allMatches(line).toList();
+    final normalizedLine = line
+        .replaceAll('−', '-')
+        .replaceAll('–', '-')
+        .replaceAll('—', '-')
+        .replaceAll('＋', '+');
+    final matches = _amountRegex.allMatches(normalizedLine).toList();
     if (matches.isEmpty) return null;
     final match = matches.last;
     final sign = match.group(1) ?? '';
@@ -184,8 +193,33 @@ class InvoiceParser {
     final normalized = raw.replaceAll('.', '').replaceAll(',', '.');
     final value = double.tryParse(normalized);
     if (value == null) return null;
-    if (sign.contains('-')) return -value;
-    return value;
+    var isNegative = sign.contains('-') || raw.trim().startsWith('-');
+    final hasExplicit = sign.contains('-') || sign.contains('+');
+    if (!hasExplicit) {
+      final after = normalizedLine.substring(match.end).trimLeft();
+      final before = normalizedLine.substring(0, match.start).trimRight();
+      final afterSign = after.startsWith('-')
+          ? '-'
+          : after.startsWith('+')
+          ? '+'
+          : null;
+      final beforeSign = before.endsWith('-')
+          ? '-'
+          : before.endsWith('+')
+          ? '+'
+          : null;
+      final inferred = afterSign ?? beforeSign;
+      if (inferred == '-') {
+        isNegative = true;
+      } else if (inferred == '+') {
+        isNegative = false;
+      }
+    }
+    if (!hasExplicit && !isNegative) {
+      // Faturas de cartao tendem a ser debito quando nao ha sinal explicito.
+      return -value;
+    }
+    return isNegative ? -value : value;
   }
 
   static InvoiceInstallmentInfo? _parseInstallment(String line) {

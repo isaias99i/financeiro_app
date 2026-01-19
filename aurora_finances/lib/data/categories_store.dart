@@ -109,7 +109,7 @@ class CategoriesStore extends ChangeNotifier {
       'Assinaturas',
       'Compras',
       'Equipamentos',
-      'Tecnologia',
+      'Tecnologia'      
     ];
   }
 

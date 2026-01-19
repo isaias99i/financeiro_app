@@ -37,11 +37,13 @@ class FaturaImportScreen extends StatefulWidget {
 class _FaturaImportScreenState extends State<FaturaImportScreen> {
   final TextRecognizer _textRecognizer =
       TextRecognizer(script: TextRecognitionScript.latin);
+  final ScrollController _scrollController = ScrollController();
   final List<_DraftEntry> _entries = [];
   _ColumnOption? _selectedColumn;
   bool _isProcessing = false;
   String? _error;
   String? _pdfPassword;
+  DateTime _referenceMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
 
   // Garante dados carregados para dropdowns e categorias.
   @override
@@ -59,11 +61,13 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   void dispose() {
     // Libera recursos do OCR e controladores dos drafts.
     _textRecognizer.close();
+    _scrollController.dispose();
     for (final entry in _entries) {
       entry.dispose();
     }
     super.dispose();
   }
+
 
   @override
   // Monta a tela principal e mantem estado do filtro de cartao.
@@ -80,9 +84,13 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
         title: const Text('Importar fatura'),
       ),
       body: ListView(
+        key: const PageStorageKey('fatura_import_scroll'),
+        controller: _scrollController,
         padding: const EdgeInsets.all(16),
         children: [
           _buildCardSection(options),
+          const SizedBox(height: 16),
+          _buildReferenceMonthSection(settings),
           const SizedBox(height: 16),
           _buildPdfSection(),
           if (_isProcessing) ...[
@@ -156,6 +164,44 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
             style: TextStyle(color: tokens.textSecondary),
           ),
         ],
+      ],
+    );
+  }
+
+  // Monta a secao de mes de referencia da fatura.
+  Widget _buildReferenceMonthSection(AppSettingsStore settings) {
+    final tokens = AppThemeTokens.of(context);
+    final formatter = settings.monthYearFormatter();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionTitle('Mes da fatura'),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: _pickReferenceMonth,
+          borderRadius: BorderRadius.circular(12),
+          child: Ink(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: tokens.surfaceAlt,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: tokens.border),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.calendar_month, color: tokens.textSecondary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    formatter.format(_referenceMonth),
+                    style: TextStyle(color: tokens.textPrimary),
+                  ),
+                ),
+                Icon(Icons.expand_more, color: tokens.textSecondary),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -283,18 +329,25 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
     });
     try {
       final extracted = <InvoiceParsedItem>[];
+      final referenceDate = _referenceMonth;
       final text = _extractPdfText(pdfPath, password);
       if (text != null && text.trim().isNotEmpty) {
         extracted.addAll(
           InvoiceParser.parse(
             text,
-            referenceDate: DateTime.now(),
+            referenceDate: referenceDate,
           ),
         );
       }
 
       if (extracted.isEmpty) {
-        extracted.addAll(await _ocrPdf(pdfPath, password: password));
+        extracted.addAll(
+          await _ocrPdf(
+            pdfPath,
+            password: password,
+            referenceDate: referenceDate,
+          ),
+        );
       }
 
       if (extracted.isEmpty) {
@@ -352,6 +405,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   Future<List<InvoiceParsedItem>> _ocrPdf(
     String pdfPath, {
     String? password,
+    required DateTime referenceDate,
   }) async {
     // Renderiza paginas em imagem e roda OCR local.
     final tempDir = await getTemporaryDirectory();
@@ -380,7 +434,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
       final recognizedText = await _textRecognizer.processImage(inputImage);
       final items = InvoiceParser.parse(
         recognizedText.text,
-        referenceDate: DateTime.now(),
+        referenceDate: referenceDate,
       );
       extracted.addAll(items);
       await page.close();
@@ -439,6 +493,19 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
     return result;
   }
 
+  Future<void> _pickReferenceMonth() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _referenceMonth,
+      firstDate: DateTime(2000, 1, 1),
+      lastDate: DateTime(2100, 12, 31),
+    );
+    if (picked == null) return;
+    setState(() {
+      _referenceMonth = DateTime(picked.year, picked.month, 1);
+    });
+  }
+
   // Monta a lista de lancamentos extraidos.
   Widget _buildEntriesList(AppSettingsStore settings, List<String> categories) {
     // Lista de lancamentos detectados para edicao manual.
@@ -447,6 +514,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
     }
 
     return ListView.separated(
+      padding: EdgeInsets.zero,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: _entries.length,
@@ -459,10 +527,19 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
           settings: settings,
           onRemove: () => _removeEntry(index),
           onDatePick: () => _pickEntryDate(entry),
-          onCategoryChanged: (value) => setState(() => entry.category = value),
+          onCategoryChanged: (value) {
+            entry.category = value;
+          },
           onAmountChanged: (value) {
             setState(() {
-              entry.amountValue = parseCurrencyToDouble(value);
+              final parsed = parseCurrencyToDouble(value);
+              entry.amountValue = entry.amountValue.isNegative ? -parsed : parsed;
+            });
+          },
+          onSignChanged: (isPositive) {
+            setState(() {
+              entry.amountValue =
+                  isPositive ? entry.amountValue.abs() : -entry.amountValue.abs();
             });
           },
           onInstallmentToggle: (value) {
@@ -502,7 +579,10 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
       lastDate: DateTime(2100, 12, 31),
     );
     if (picked == null) return;
-    setState(() => entry.date = picked);
+    setState(() {
+      entry.date = picked;
+      entry.purchaseDate = picked;
+    });
   }
 
   // Remove um lancamento da lista.
@@ -527,19 +607,19 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
     }
 
     for (final entry in _entries) {
-      if (entry.amountValue <= 0) continue;
       if (entry.isInstallment && entry.installmentCount > 1) {
-        _addInstallments(entry, column.id);
+        _addInstallments(entry, column.id, referenceDate: _referenceMonth);
         continue;
       }
       widget.despesasStore.addEntry(
         ExpenseEntry(
           id: widget.despesasStore.nextId(),
           columnId: column.id,
-          date: entry.date,
+          date: _dateForReferenceMonth(entry.purchaseDate, _referenceMonth),
           category: entry.category,
           reason: entry.reason,
           amount: entry.amountValue,
+          purchaseDate: entry.purchaseDate,
         ),
       );
     }
@@ -551,7 +631,11 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   // Gera lancamentos parcelados a partir de uma compra.
-  void _addInstallments(_DraftEntry entry, String columnId) {
+  void _addInstallments(
+    _DraftEntry entry,
+    String columnId, {
+    required DateTime referenceDate,
+  }) {
     // Gera parcelas futuras quando o item eh parcelado.
     final count = entry.installmentCount;
     final index = entry.installmentIndex;
@@ -560,26 +644,44 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
         ExpenseEntry(
           id: widget.despesasStore.nextId(),
           columnId: columnId,
-          date: _installmentDate(entry.date, i),
+          date: _installmentDateFromReference(
+            referenceDate: referenceDate,
+            purchaseDate: entry.purchaseDate,
+            currentIndex: entry.installmentIndex,
+            targetIndex: i,
+          ),
           category: entry.category,
           reason: entry.reason,
           amount: entry.amountValue,
           installmentCount: count,
           installmentIndex: i,
-          purchaseDate: entry.date,
+          purchaseDate: entry.purchaseDate,
         ),
       );
     }
   }
 
-  // Calcula a data da parcela conforme a compra.
-  DateTime _installmentDate(DateTime purchaseDate, int installmentIndex) {
-    // Calcula a data de cada parcela usando o dia mais seguro do mes.
+  // Calcula a data da parcela usando o mes da fatura como referencia.
+  DateTime _installmentDateFromReference({
+    required DateTime referenceDate,
+    required DateTime purchaseDate,
+    required int currentIndex,
+    required int targetIndex,
+  }) {
+    final monthOffset = targetIndex - currentIndex;
     final targetMonth = DateTime(
-      purchaseDate.year,
-      purchaseDate.month + (installmentIndex - 1),
+      referenceDate.year,
+      referenceDate.month + monthOffset,
       1,
     );
+    final lastDay = DateTime(targetMonth.year, targetMonth.month + 1, 0).day;
+    final safeDay = purchaseDate.day > lastDay ? lastDay : purchaseDate.day;
+    return DateTime(targetMonth.year, targetMonth.month, safeDay);
+  }
+
+  // Ajusta a data para o mes da fatura mantendo o dia da compra.
+  DateTime _dateForReferenceMonth(DateTime purchaseDate, DateTime referenceDate) {
+    final targetMonth = DateTime(referenceDate.year, referenceDate.month, 1);
     final lastDay = DateTime(targetMonth.year, targetMonth.month + 1, 0).day;
     final safeDay = purchaseDate.day > lastDay ? lastDay : purchaseDate.day;
     return DateTime(targetMonth.year, targetMonth.month, safeDay);
@@ -597,6 +699,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
 // Modelo temporario de lancamento importado.
 class _DraftEntry {
   DateTime date;
+  DateTime purchaseDate;
   String category;
   String reason;
   bool isInstallment;
@@ -610,6 +713,7 @@ class _DraftEntry {
 
   _DraftEntry({
     required this.date,
+    required this.purchaseDate,
     required this.category,
     required this.reason,
     required this.amountValue,
@@ -635,6 +739,7 @@ class _DraftEntry {
 
     return _DraftEntry(
       date: item.date,
+      purchaseDate: item.date,
       category: category,
       reason: item.description,
       amountValue: item.amount,
@@ -648,11 +753,13 @@ class _DraftEntry {
     );
   }
 
+
   // Sincroniza controllers com os valores atuais.
   void syncControllers(AppSettingsStore settings) {
     // Sincroniza valores editados no formulario.
     reason = reasonController.text.trim();
-    amountValue = parseCurrencyToDouble(amountController.text);
+    final parsed = parseCurrencyToDouble(amountController.text);
+    amountValue = amountValue.isNegative ? -parsed : parsed;
     final count = int.tryParse(installmentCountController.text) ?? 1;
     final index = int.tryParse(installmentIndexController.text) ?? 1;
     installmentCount = count <= 0 ? 1 : count;
@@ -701,6 +808,7 @@ class _EntryCard extends StatelessWidget {
   final VoidCallback onDatePick;
   final ValueChanged<String> onCategoryChanged;
   final ValueChanged<String> onAmountChanged;
+  final ValueChanged<bool> onSignChanged;
   final ValueChanged<bool> onInstallmentToggle;
   final ValueChanged<String> onInstallmentCountChanged;
   final ValueChanged<String> onInstallmentIndexChanged;
@@ -715,6 +823,7 @@ class _EntryCard extends StatelessWidget {
     required this.onDatePick,
     required this.onCategoryChanged,
     required this.onAmountChanged,
+    required this.onSignChanged,
     required this.onInstallmentToggle,
     required this.onInstallmentCountChanged,
     required this.onInstallmentIndexChanged,
@@ -728,6 +837,9 @@ class _EntryCard extends StatelessWidget {
     // Card visual para revisar e editar cada lancamento.
     final moneyFormatter = settings.currencyFormatter();
     final tokens = AppThemeTokens.of(context);
+    final amountColor =
+        entry.amountValue >= 0 ? tokens.success : tokens.danger;
+    final isPositive = entry.amountValue >= 0;
     final categoryList = categories.isEmpty ? ['Outros'] : categories.toList();
     if (entry.category.isNotEmpty && !categoryList.contains(entry.category)) {
       categoryList.insert(0, entry.category);
@@ -792,8 +904,24 @@ class _EntryCard extends StatelessWidget {
               ),
             ],
             decoration: fieldDecoration('Valor'),
-            style: TextStyle(color: tokens.textPrimary),
+            style: TextStyle(color: amountColor),
             onChanged: onAmountChanged,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              ChoiceChip(
+                label: const Text('Despesa (-)'),
+                selected: !isPositive,
+                onSelected: (_) => onSignChanged(false),
+              ),
+              const SizedBox(width: 8),
+              ChoiceChip(
+                label: const Text('Credito (+)'),
+                selected: isPositive,
+                onSelected: (_) => onSignChanged(true),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           TextButton.icon(
@@ -809,7 +937,7 @@ class _EntryCard extends StatelessWidget {
             title: const Text('Compra parcelada'),
             subtitle: const Text('Criar parcelas nos meses seguintes'),
             value: entry.isInstallment,
-            onChanged: onInstallmentToggle,
+            onChanged: entry.amountValue >= 0 ? null : onInstallmentToggle,
           ),
           if (entry.isInstallment) ...[
             Row(

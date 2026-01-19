@@ -470,7 +470,6 @@ class _MenuItemRow extends StatelessWidget {
   final Widget dragHandle;
 
   const _MenuItemRow({
-    super.key,
     required this.title,
     required this.value,
     required this.color,
