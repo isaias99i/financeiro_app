@@ -178,33 +178,82 @@ class _DespesasScreenState extends State<DespesasScreen> {
                                       oldIndex,
                                       newIndex,
                                     ),
+                                isFixedPositive: (column) =>
+                                    widget.store.valueForColumn(
+                                      _selectedMonth,
+                                      column,
+                                    ) >
+                                    0,
+                                onToggleFixed: (column) => _setSimpleValueSign(
+                                  _selectedMonth,
+                                  column,
+                                  !(widget.store.valueForColumn(
+                                        _selectedMonth,
+                                        column,
+                                      ) >
+                                      0),
+                                  _simpleControllerFor(
+                                    _selectedMonth,
+                                    column,
+                                    moneyFormatter,
+                                  ),
+                                ),
                                 dragHandle: ReorderableDragStartListener(
                                   index: index,
                                   child: const Icon(Icons.drag_indicator),
                                 ),
                                 buildCell: (column, columnIndex) {
                                   if (!column.requiresEntries) {
-                                    return _ColumnValueTile(
-                                      title: column.title,
-                                      controller: _simpleControllerFor(
-                                        _selectedMonth,
-                                        column,
-                                        moneyFormatter,
-                                      ),
-                                      onChanged: (value) =>
-                                          _updateSimpleValueCurrent(
+                                  return _ColumnValueTile(
+                                    title: column.title,
+                                    controller: _simpleControllerFor(
+                                      _selectedMonth,
+                                      column,
+                                      moneyFormatter,
+                                    ),
+                                    isPositive:
+                                        widget.store.valueForColumn(
+                                          _selectedMonth,
+                                          column,
+                                        ) >
+                                        0,
+                                    onChanged: (value) =>
+                                        _updateSimpleValueCurrent(
+                                          _selectedMonth,
+                                          column,
+                                          value,
+                                          widget.store
+                                                  .valueForColumn(
+                                                    _selectedMonth,
+                                                    column,
+                                                  ) >
+                                              0,
+                                        ),
+                                    onApply: (value) =>
+                                        _applyFixedValueFromMonth(
+                                          _selectedMonth,
+                                          column,
+                                          value,
+                                          widget.store
+                                                  .valueForColumn(
+                                                    _selectedMonth,
+                                                    column,
+                                                  ) >
+                                              0,
+                                        ),
+                                    onSignChanged: (isPositive) =>
+                                        _setSimpleValueSign(
+                                          _selectedMonth,
+                                          column,
+                                          isPositive,
+                                          _simpleControllerFor(
                                             _selectedMonth,
                                             column,
-                                            value,
+                                            moneyFormatter,
                                           ),
-                                      onApply: (value) =>
-                                          _applyFixedValueFromMonth(
-                                            _selectedMonth,
-                                            column,
-                                            value,
-                                          ),
-                                    );
-                                  }
+                                        ),
+                                  );
+                                }
 
                                   final total = widget.store.totalForColumn(
                                     _selectedMonth,
@@ -328,8 +377,8 @@ class _DespesasScreenState extends State<DespesasScreen> {
     return _simpleControllers.putIfAbsent(key, () {
       final controller = TextEditingController();
       final value = widget.store.valueForColumn(month, column);
-      if (value > 0) {
-        controller.text = formatter.format(value);
+      if (value != 0) {
+        controller.text = formatter.format(value.abs());
       }
       return controller;
     });
@@ -340,12 +389,14 @@ class _DespesasScreenState extends State<DespesasScreen> {
     DateTime month,
     ExpenseColumn column,
     String value,
+    bool isPositive,
   ) {
     final parsed = parseCurrencyToDouble(value);
+    final signed = isPositive ? parsed.abs() : -parsed.abs();
     final settings = AppSettingsScope.of(context);
     final formatter = settings.currencyFormatter();
     final end = DateTime(2030, 12, 1);
-    widget.store.setFixedValueFromMonth(month, end, column, parsed);
+    widget.store.setFixedValueFromMonth(month, end, column, signed);
 
     _simpleControllers.forEach((key, controller) {
       final parts = key.split('|');
@@ -356,7 +407,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
       if (parsedMonth == null || parsedMonth.isBefore(month)) {
         return;
       }
-      controller.text = formatter.format(parsed);
+      controller.text = signed == 0 ? '' : formatter.format(signed.abs());
     });
   }
 
@@ -365,9 +416,25 @@ class _DespesasScreenState extends State<DespesasScreen> {
     DateTime month,
     ExpenseColumn column,
     String value,
+    bool isPositive,
   ) {
     final parsed = parseCurrencyToDouble(value);
-    widget.store.setValueForColumn(month, column, parsed);
+    final signed = isPositive ? parsed.abs() : -parsed.abs();
+    widget.store.setValueForColumn(month, column, signed);
+  }
+
+  void _setSimpleValueSign(
+    DateTime month,
+    ExpenseColumn column,
+    bool isPositive,
+    TextEditingController controller,
+  ) {
+    final parsed = parseCurrencyToDouble(controller.text);
+    final signed = isPositive ? parsed.abs() : -parsed.abs();
+    widget.store.setValueForColumn(month, column, signed);
+    final settings = AppSettingsScope.of(context);
+    final formatter = settings.currencyFormatter();
+    controller.text = signed == 0 ? '' : formatter.format(signed.abs());
   }
 
   // Cria uma nova categoria de despesas.
@@ -433,7 +500,29 @@ class _DespesasScreenState extends State<DespesasScreen> {
   }
 
   // Remove uma subcategoria de uma categoria.
-  void _removeColumn(ExpenseGroup group, ExpenseColumn column) {
+  Future<void> _removeColumn(ExpenseGroup group, ExpenseColumn column) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Remover subcategoria'),
+          content: Text(
+            'Remover "${column.title}" e todos os lancamentos associados?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Remover'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirm != true) return;
     widget.store.removeColumn(group, column);
   }
 
@@ -842,6 +931,8 @@ class _GroupCard extends StatelessWidget {
   final void Function(ExpenseColumn column) onEditColumn;
   final void Function(ExpenseColumn column) onRemoveColumn;
   final void Function(int oldIndex, int newIndex) onReorderColumns;
+  final bool Function(ExpenseColumn column) isFixedPositive;
+  final void Function(ExpenseColumn column) onToggleFixed;
   final Widget dragHandle;
   final Widget Function(ExpenseColumn column, int index) buildCell;
 
@@ -854,6 +945,8 @@ class _GroupCard extends StatelessWidget {
     required this.onEditColumn,
     required this.onRemoveColumn,
     required this.onReorderColumns,
+    required this.isFixedPositive,
+    required this.onToggleFixed,
     required this.dragHandle,
     required this.buildCell,
   });
@@ -916,10 +1009,13 @@ class _GroupCard extends StatelessWidget {
                             switch (action) {
                               case _GroupAction.addColumn:
                                 onAddColumn();
+                                break;
                               case _GroupAction.editGroup:
                                 onEditGroup();
+                                break;
                               case _GroupAction.removeGroup:
                                 onRemoveGroup();
+                                break;
                             }
                           },
                           padding: EdgeInsets.zero,
@@ -927,23 +1023,33 @@ class _GroupCard extends StatelessWidget {
                             width: 32,
                             height: 32,
                           ),
+                          color: tokens.surface,
                           iconSize: 20,
                           icon: Icon(
                             Icons.more_vert,
                             color: tokens.textSecondary,
                           ),
-                          itemBuilder: (context) => const [
+                          itemBuilder: (context) => [
                             PopupMenuItem(
                               value: _GroupAction.addColumn,
-                              child: Text('Adicionar subcategoria'),
+                              child: Text(
+                                'Adicionar subcategoria',
+                                style: TextStyle(color: tokens.textPrimary),
+                              ),
                             ),
                             PopupMenuItem(
                               value: _GroupAction.editGroup,
-                              child: Text('Editar categoria'),
+                              child: Text(
+                                'Editar categoria',
+                                style: TextStyle(color: tokens.textPrimary),
+                              ),
                             ),
                             PopupMenuItem(
                               value: _GroupAction.removeGroup,
-                              child: Text('Remover categoria'),
+                              child: Text(
+                                'Remover categoria',
+                                style: TextStyle(color: tokens.textPrimary),
+                              ),
                             ),
                           ],
                         ),
@@ -1052,29 +1158,22 @@ class _GroupCard extends StatelessWidget {
                         child: Stack(
                           children: [
                             buildCell(column, index),
-                            Positioned(
-                              top: 4,
-                              right: 4,
-                              child: Row(
-                                children: [
-                                  ReorderableDragStartListener(
-                                    index: index,
-                                    child: const Icon(
-                                      Icons.drag_indicator,
-                                      size: 18,
-                                    ),
-                                  ),
-                                  _TinyIconButton(
-                                    icon: Icons.edit,
-                                    onTap: () => onEditColumn(column),
-                                  ),
-                                  _TinyIconButton(
-                                    icon: Icons.close,
-                                    onTap: () => onRemoveColumn(column),
-                                  ),
-                                ],
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: Row(
+                            children: [
+                              _TinyIconButton(
+                                icon: Icons.edit,
+                                onTap: () => onEditColumn(column),
                               ),
-                            ),
+                              _TinyIconButton(
+                                icon: Icons.close,
+                                onTap: () => onRemoveColumn(column),
+                              ),
+                            ],
+                          ),
+                        ),
                           ],
                         ),
                       );
@@ -1211,14 +1310,18 @@ class _ColumnSummaryTile extends StatelessWidget {
 class _ColumnValueTile extends StatelessWidget {
   final String title;
   final TextEditingController controller;
+  final bool isPositive;
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onApply;
+  final ValueChanged<bool> onSignChanged;
 
   const _ColumnValueTile({
     required this.title,
     required this.controller,
+    required this.isPositive,
     required this.onChanged,
     required this.onApply,
+    required this.onSignChanged,
   });
 
   @override
@@ -1229,6 +1332,7 @@ class _ColumnValueTile extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isTight = constraints.maxHeight < 100;
+        final amountColor = isPositive ? tokens.success : tokens.danger;
         return Container(
           padding: EdgeInsets.fromLTRB(
             AppLayout.spaceMd,
@@ -1270,33 +1374,50 @@ class _ColumnValueTile extends StatelessWidget {
                     onApply(controller.text);
                   }
                 },
-                child: TextField(
-                  controller: controller,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  inputFormatters: [
-                    CurrencyInputFormatter(
-                      locale: settings.currencyLocale,
-                      symbol: settings.currencySymbol,
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => onSignChanged(!isPositive),
+                      icon: Icon(isPositive ? Icons.add : Icons.remove),
+                      color: amountColor,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 28,
+                        height: 28,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    Expanded(
+                      child: TextField(
+                        controller: controller,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        inputFormatters: [
+                          CurrencyInputFormatter(
+                            locale: settings.currencyLocale,
+                            symbol: settings.currencySymbol,
+                          ),
+                        ],
+                        style: TextStyle(
+                          color: amountColor,
+                          fontSize: isTight ? 13 : 14,
+                        ),
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          isDense: true,
+                          hintText: '0,00',
+                          hintStyle: TextStyle(color: tokens.textMuted),
+                        ),
+                        onChanged: (value) {
+                          onChanged(value);
+                          onApply(value);
+                        },
+                        onEditingComplete: () => onApply(controller.text),
+                        onSubmitted: (_) => onApply(controller.text),
+                      ),
                     ),
                   ],
-                  style: TextStyle(
-                    color: tokens.textPrimary,
-                    fontSize: isTight ? 13 : 14,
-                  ),
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    isDense: true,
-                    hintText: '0,00',
-                    hintStyle: TextStyle(color: tokens.textMuted),
-                  ),
-                  onChanged: (value) {
-                    onChanged(value);
-                    onApply(value);
-                  },
-                  onEditingComplete: () => onApply(controller.text),
-                  onSubmitted: (_) => onApply(controller.text),
                 ),
               ),
               // Indicador removido para evitar overflow em tiles compactos.

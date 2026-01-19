@@ -298,7 +298,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   Future<void> _pickPdf() async {
-    // Seleciona PDF no dispositivo e pede senha se necessario.
+    // Seleciona PDF no dispositivo e pede senha apenas se necessario.
     setState(() {
       _error = null;
     });
@@ -315,9 +315,9 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
     if (result == null || result.files.single.path == null) {
       return;
     }
-    _pdfPassword = await _promptForPassword();
     final path = result.files.single.path!;
-    await _processPdf(path, password: _pdfPassword);
+    _pdfPassword = null;
+    await _processPdf(path);
   }
 
   Future<void> _processPdf(String pdfPath, {String? password}) async {
@@ -336,6 +336,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
           InvoiceParser.parse(
             text,
             referenceDate: referenceDate,
+            debugLog: debugPrint,
           ),
         );
       }
@@ -371,7 +372,18 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
       }).toList();
 
       setState(() => _entries.addAll(drafts));
-    } catch (e) {
+    } catch (error) {
+      if (password == null && _isPasswordError(error)) {
+        _pdfPassword = await _promptForPassword();
+        if (_pdfPassword == null || _pdfPassword!.isEmpty) {
+          setState(() {
+            _error = 'Senha do PDF obrigatoria para ler a fatura.';
+          });
+          return;
+        }
+        await _processPdf(pdfPath, password: _pdfPassword);
+        return;
+      }
       setState(() {
         _error = 'Falha ao ler a fatura. Verifique o PDF e tente novamente.';
       });
@@ -435,6 +447,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
       final items = InvoiceParser.parse(
         recognizedText.text,
         referenceDate: referenceDate,
+        debugLog: debugPrint,
       );
       extracted.addAll(items);
       await page.close();
@@ -677,6 +690,14 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
     final lastDay = DateTime(targetMonth.year, targetMonth.month + 1, 0).day;
     final safeDay = purchaseDate.day > lastDay ? lastDay : purchaseDate.day;
     return DateTime(targetMonth.year, targetMonth.month, safeDay);
+  }
+
+  bool _isPasswordError(Object error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('password') ||
+        message.contains('senha') ||
+        message.contains('encrypted') ||
+        message.contains('invalid');
   }
 
   // Ajusta a data para o mes da fatura mantendo o dia da compra.
