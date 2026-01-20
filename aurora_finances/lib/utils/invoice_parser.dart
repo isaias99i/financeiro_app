@@ -1,4 +1,4 @@
-class InvoiceInstallmentInfo {
+﻿class InvoiceInstallmentInfo {
   final int index;
   final int count;
 
@@ -37,8 +37,10 @@ class InvoiceParser {
   );
   static final RegExp _amountRegex =
       RegExp(r'([+\-]?)\s*R?\$?\s*(-?\d{1,3}(?:\.\d{3})*,\d{2})');
-  static final RegExp _installmentSlash = RegExp(r'\b(\d{1,2})\s*\/\s*(\d{1,2})\b');
-  static final RegExp _installmentWord = RegExp(r'\b(\d{1,2})\s+de\s+(\d{1,2})\b');
+  static final RegExp _installmentSlash =
+      RegExp(r'\b(\d{1,2})\s*\/\s*(\d{1,2})\b');
+  static final RegExp _installmentWord =
+      RegExp(r'\b(\d{1,2})\s+de\s+(\d{1,2})\b');
 
   static const Map<String, int> _ptMonths = {
     'jan': 1,
@@ -47,7 +49,6 @@ class InvoiceParser {
     'fevereiro': 2,
     'mar': 3,
     'marco': 3,
-    'março': 3,
     'abr': 4,
     'abril': 4,
     'mai': 5,
@@ -74,12 +75,70 @@ class InvoiceParser {
     void Function(String message)? debugLog,
   }) {
     // Faz parsing linha a linha com suporte a multiline (descricao + valor).
-    final lines = text
+    final lines = _normalizeLines(text);
+    if (_looksLikeSantander(lines)) {
+      debugLog?.call('PARSE_PROFILE: santander');
+      return _parseSantander(lines, referenceDate, debugLog);
+    }
+    return _parseGeneric(lines, referenceDate, debugLog);
+  }
+
+  static List<String> _normalizeLines(String text) {
+    return text
         .split('\n')
         .map((line) => line.trim())
         .where((line) => line.isNotEmpty)
         .toList();
+  }
 
+  static String _normalizeLine(String line) {
+    // Normaliza texto para comparacoes sem acento.
+    final lower = line.toLowerCase();
+    final buffer = StringBuffer();
+    for (final rune in lower.runes) {
+      buffer.write(_diacriticMap[rune] ?? String.fromCharCode(rune));
+    }
+    return buffer.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  static const Map<int, String> _diacriticMap = {
+    0x00e1: 'a',
+    0x00e0: 'a',
+    0x00e2: 'a',
+    0x00e3: 'a',
+    0x00e4: 'a',
+    0x00e9: 'e',
+    0x00e8: 'e',
+    0x00ea: 'e',
+    0x00eb: 'e',
+    0x00ed: 'i',
+    0x00ec: 'i',
+    0x00ee: 'i',
+    0x00ef: 'i',
+    0x00f3: 'o',
+    0x00f2: 'o',
+    0x00f4: 'o',
+    0x00f5: 'o',
+    0x00f6: 'o',
+    0x00fa: 'u',
+    0x00f9: 'u',
+    0x00fb: 'u',
+    0x00fc: 'u',
+    0x00e7: 'c',
+  };
+
+  static bool _looksLikeSantander(List<String> lines) {
+    final sample = _normalizeLine(lines.take(80).join(' '));
+    return sample.contains('detalhamento da fatura') ||
+        sample.contains('pagamento e demais creditos') ||
+        sample.contains('parcelamentos');
+  }
+
+  static List<InvoiceParsedItem> _parseGeneric(
+    List<String> lines,
+    DateTime referenceDate,
+    void Function(String message)? debugLog,
+  ) {
     final results = <InvoiceParsedItem>[];
     DateTime? currentDate;
     String? currentDescription;
@@ -141,7 +200,8 @@ class InvoiceParser {
         if (currentDate != null && currentInstallment == null) {
           currentInstallment = _parseInstallment(line);
         }
-        if (currentDate != null && (currentDescription == null || currentDescription.isEmpty)) {
+        if (currentDate != null &&
+            (currentDescription == null || currentDescription.isEmpty)) {
           if (!_isCardMaskLine(line)) {
             pendingParts.add(line);
           }
@@ -149,6 +209,192 @@ class InvoiceParser {
       }
     }
     return results;
+  }
+
+  static List<InvoiceParsedItem> _parseSantander(
+    List<String> lines,
+    DateTime referenceDate,
+    void Function(String message)? debugLog,
+  ) {
+    final tableLines = _santanderTableLines(lines);
+    final results = <InvoiceParsedItem>[];
+    DateTime? currentDate;
+    String? currentDescription;
+    InvoiceInstallmentInfo? currentInstallment;
+    final pendingParts = <String>[];
+
+    for (final line in tableLines) {
+      debugLog?.call('OCR: "$line"');
+      if (_shouldSkipSantander(line, currentDate != null)) {
+        continue;
+      }
+      final date = currentDate == null ? _parseSantanderDate(line, referenceDate) : null;
+      if (date != null) {
+        currentDate = date;
+        currentInstallment = null;
+        final inline = _extractDescriptionSantander(line);
+        currentDescription = inline.isNotEmpty
+            ? inline
+            : (pendingParts.isNotEmpty ? pendingParts.join(' ') : null);
+        pendingParts.clear();
+      }
+
+      final amount = _parseAmount(line);
+      if (currentDate != null && amount != null) {
+        if (_shouldDeferAmountLine(line)) {
+          continue;
+        }
+        currentInstallment ??= _parseInstallment(line);
+        var description = currentDescription ?? '';
+        if (description.isEmpty) {
+          if (pendingParts.isNotEmpty) {
+            description = pendingParts.join(' ');
+          } else {
+            description = _stripAmount(line);
+          }
+        }
+        if (description.isEmpty) {
+          description = 'Lancamento';
+        }
+        description = _stripAmount(description);
+        debugLog?.call('PARSED: "$description" | $amount');
+        results.add(
+          InvoiceParsedItem(
+            date: currentDate,
+            description: description,
+            amount: amount,
+            installment: currentInstallment,
+          ),
+        );
+        currentDate = null;
+        currentDescription = null;
+        currentInstallment = null;
+        pendingParts.clear();
+        continue;
+      }
+
+      if (date == null && amount == null) {
+        final installment = _parseInstallment(line);
+        if (currentDate != null && installment != null) {
+          currentInstallment ??= installment;
+          continue;
+        }
+        if (currentDate != null &&
+            (currentDescription == null || currentDescription.isEmpty)) {
+          if (!_isCardMaskLine(line) && !_isSantanderDetailLine(line)) {
+            pendingParts.add(line);
+          }
+        }
+      }
+    }
+    return results;
+  }
+
+  static List<String> _santanderTableLines(List<String> lines) {
+    final filtered = <String>[];
+    var inDetails = false;
+    var inTable = false;
+    for (final line in lines) {
+      final normalized = _normalizeLine(line);
+      if (normalized.contains('detalhamento da fatura')) {
+        inDetails = true;
+        inTable = false;
+        continue;
+      }
+      if (!inDetails) continue;
+      if (normalized.contains('resumo da fatura')) {
+        break;
+      }
+      if (normalized.contains('pagamento e demais creditos') ||
+          normalized.contains('parcelamentos')) {
+        inTable = true;
+        continue;
+      }
+      if (!inTable) continue;
+      if (_isSantanderHeaderLine(line) || _isSantanderTableSeparator(line)) {
+        continue;
+      }
+      filtered.add(line);
+    }
+    return filtered;
+  }
+
+  static bool _isSantanderHeaderLine(String line) {
+    final normalized = _normalizeLine(line);
+    if (normalized == 'compra' ||
+        normalized == 'data' ||
+        normalized == 'descricao' ||
+        normalized == 'parcela' ||
+        normalized == 'r\$' ||
+        normalized == 'us\$') {
+      return true;
+    }
+    if (normalized.contains('valor total')) return true;
+    return false;
+  }
+
+  static bool _isSantanderTableSeparator(String line) {
+    final normalized = _normalizeLine(line);
+    if (normalized.startsWith('@ ') && normalized.contains('xxxx')) {
+      return true;
+    }
+    return false;
+  }
+
+  static DateTime? _parseSantanderDate(String line, DateTime referenceDate) {
+    // Datas Santander aparecem como DD/MM sem ano na coluna de compra.
+    final normalized = _normalizeLine(line);
+    if (normalized.contains('parcela') || normalized.contains('parc')) {
+      return null;
+    }
+    final match = _dateNumeric.firstMatch(line);
+    if (match == null) return null;
+    final day = int.tryParse(match.group(1) ?? '');
+    final month = int.tryParse(match.group(2) ?? '');
+    if (day == null || month == null) return null;
+    final yearRaw = match.group(3);
+    int year;
+    if (yearRaw == null || yearRaw.isEmpty) {
+      year = referenceDate.year;
+      if (month > referenceDate.month + 1) {
+        year -= 1;
+      }
+    } else {
+      year = int.tryParse(yearRaw) ?? referenceDate.year;
+      if (yearRaw.length == 2) {
+        year += 2000;
+      }
+    }
+    try {
+      return DateTime(year, month, day);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static bool _shouldSkipSantander(String line, bool hasCurrentDate) {
+    final normalized = _normalizeLine(line);
+    final hasAmount = _amountRegex.hasMatch(line);
+    if (normalized.contains('valor total')) return true;
+    if (!hasCurrentDate && normalized.startsWith('total ')) return true;
+    if (!hasAmount && _isSantanderDetailLine(line)) {
+      return true;
+    }
+    return false;
+  }
+
+  static bool _isSantanderDetailLine(String line) {
+    final normalized = _normalizeLine(line);
+    return normalized.contains('principal') || normalized.contains('juros');
+  }
+
+  static String _extractDescriptionSantander(String line) {
+    final columns = _splitColumns(line);
+    if (columns.length >= 3) {
+      final slice = columns.sublist(1, columns.length - 1).join(' ');
+      return _stripAmount(slice);
+    }
+    return _stripAmount(line);
   }
 
   static DateTime? _parseDate(String line, DateTime referenceDate) {
@@ -200,7 +446,8 @@ class InvoiceParser {
     final match = _datePt.firstMatch(line);
     if (match == null) return null;
     final day = int.tryParse(match.group(1) ?? '');
-    final monthToken = (match.group(2) ?? '').toLowerCase().replaceAll('.', '');
+    var monthToken = match.group(2) ?? '';
+    monthToken = _normalizeLine(monthToken).replaceAll('.', '');
     final month = _ptMonths[monthToken];
     final year = int.tryParse(match.group(3) ?? '');
     if (day == null || month == null || year == null) return null;
@@ -216,7 +463,8 @@ class InvoiceParser {
     final match = _datePtShort.firstMatch(line);
     if (match == null) return null;
     final day = int.tryParse(match.group(1) ?? '');
-    final monthToken = (match.group(2) ?? '').toLowerCase().replaceAll('.', '');
+    var monthToken = match.group(2) ?? '';
+    monthToken = _normalizeLine(monthToken).replaceAll('.', '');
     final month = _ptMonths[monthToken];
     if (day == null || month == null) return null;
     var year = referenceDate.year;
@@ -233,10 +481,10 @@ class InvoiceParser {
   static double? _parseAmount(String line) {
     // Extrai valor monetario, respeitando sinais + e -.
     final normalizedLine = line
-        .replaceAll('−', '-')
-        .replaceAll('–', '-')
-        .replaceAll('—', '-')
-        .replaceAll('＋', '+');
+        .replaceAll('\u2212', '-')
+        .replaceAll('\u2013', '-')
+        .replaceAll('\u2014', '-')
+        .replaceAll('\u00a0', ' ');
     final matches = _amountRegex.allMatches(normalizedLine).toList();
     if (matches.isEmpty) return null;
     final match = matches.last;
@@ -254,13 +502,13 @@ class InvoiceParser {
       final afterSign = after.startsWith('-')
           ? '-'
           : after.startsWith('+')
-          ? '+'
-          : null;
+              ? '+'
+              : null;
       final beforeSign = before.endsWith('-')
           ? '-'
           : before.endsWith('+')
-          ? '+'
-          : null;
+              ? '+'
+              : null;
       final inferred = afterSign ?? beforeSign;
       if (inferred == '-') {
         isNegative = true;
@@ -309,15 +557,13 @@ class InvoiceParser {
     cleaned = cleaned.replaceFirst(_amountRegex, '');
     cleaned = cleaned.replaceAll(RegExp(r'[-+]+$'), '');
     cleaned = cleaned.replaceAll(RegExp(r'\s+[-+]\s*'), ' ');
-    cleaned = cleaned.replaceAll(RegExp(r'[•·∙●*]{2,}\s*\d{2,4}'), '');
-    cleaned = cleaned.replaceAll(RegExp(r'([^\w\s])\1{1,}\s*\d{2,4}'), '');
-    cleaned = cleaned.replaceAll(RegExp(r'[•·∙●*]{2,}'), '');
-    cleaned = cleaned.replaceAll(RegExp(r'([^\w\s])\1{1,}'), '');
+    cleaned = cleaned.replaceAll(RegExp(r'[^\w\s]{2,}\s*\d{2,4}'), '');
+    cleaned = cleaned.replaceAll(RegExp(r'[^\w\s]{2,}'), '');
     return cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
   static bool _shouldDeferAmountLine(String line) {
-    final normalized = line.toLowerCase();
+    final normalized = _normalizeLine(line);
     if (normalized.contains('total a pagar') &&
         !normalized.contains('parcelad') &&
         !normalized.contains('vezes')) {
@@ -328,12 +574,12 @@ class InvoiceParser {
 
   static bool _isCardMaskLine(String line) {
     final trimmed = line.trim();
-    return RegExp(r'^[•·∙●*]{2,}\s*\d{2,4}$').hasMatch(trimmed);
+    return RegExp(r'^[^\w\s]{2,}\s*\d{2,4}$').hasMatch(trimmed);
   }
 
   static bool _shouldSkip(String line, bool hasCurrentDate) {
     // Ignora cabecalhos e linhas que nao sao lancamentos.
-    final normalized = line.toLowerCase();
+    final normalized = _normalizeLine(line);
     if (normalized.startsWith('data movimentacao')) return true;
     if (normalized.contains('total cartao')) return true;
     if (!hasCurrentDate && normalized.startsWith('total ')) return true;
@@ -349,10 +595,10 @@ class InvoiceParser {
   }
 
   static String inferCategory(String description, List<String> categories) {
-    final normalized = description.toLowerCase();
+    final normalized = _normalizeLine(description);
     for (final category in categories) {
       if (category.trim().isEmpty) continue;
-      final name = category.toLowerCase();
+      final name = _normalizeLine(category);
       if (normalized.contains(name)) {
         return category;
       }
@@ -370,20 +616,20 @@ class InvoiceParser {
     };
 
     for (final entry in mapping.entries) {
-      if (!categories.any((cat) => cat.toLowerCase() == entry.key.toLowerCase())) {
+      if (!categories.any((cat) => _normalizeLine(cat) == _normalizeLine(entry.key))) {
         continue;
       }
       for (final keyword in entry.value) {
         if (normalized.contains(keyword)) {
           return categories.firstWhere(
-            (cat) => cat.toLowerCase() == entry.key.toLowerCase(),
+            (cat) => _normalizeLine(cat) == _normalizeLine(entry.key),
           );
         }
       }
     }
 
     final fallback = categories.firstWhere(
-      (cat) => cat.toLowerCase() == 'outros',
+      (cat) => _normalizeLine(cat) == 'outros',
       orElse: () => categories.isNotEmpty ? categories.first : '',
     );
     return fallback;

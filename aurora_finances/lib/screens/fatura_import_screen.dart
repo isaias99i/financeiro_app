@@ -143,13 +143,18 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
         DropdownButtonFormField<_ColumnOption>(
           key: ValueKey(_selectedColumn?.column.id ?? 'none'),
           initialValue: _selectedColumn,
+          isExpanded: true,
           decoration: _dropdownDecoration('Escolha a coluna do cartao'),
           dropdownColor: tokens.surface,
           items: options
               .map(
                 (option) => DropdownMenuItem(
                   value: option,
-                  child: Text('${option.group.title} - ${option.column.title}'),
+                  child: Text(
+                    '${option.group.title} - ${option.column.title}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               )
               .toList(),
@@ -268,8 +273,12 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
     // Estilo padrao para dropdowns com label fixo.
     final tokens = AppThemeTokens.of(context);
     return InputDecoration(
-      labelText: label,
-      labelStyle: TextStyle(color: tokens.textPrimary),
+      label: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(color: tokens.textPrimary),
+      ),
       floatingLabelBehavior: FloatingLabelBehavior.always,
       filled: true,
       fillColor: tokens.surfaceAlt,
@@ -373,15 +382,21 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
 
       setState(() => _entries.addAll(drafts));
     } catch (error) {
-      if (password == null && _isPasswordError(error)) {
-        _pdfPassword = await _promptForPassword();
-        if (_pdfPassword == null || _pdfPassword!.isEmpty) {
-          setState(() {
-            _error = 'Senha do PDF obrigatoria para ler a fatura.';
-          });
+      if (_isPasswordError(error)) {
+        if (password == null) {
+          _pdfPassword = await _promptForPassword();
+          if (_pdfPassword == null || _pdfPassword!.isEmpty) {
+            setState(() {
+              _error = 'Senha do PDF obrigatoria para ler a fatura.';
+            });
+            return;
+          }
+          await _processPdf(pdfPath, password: _pdfPassword);
           return;
         }
-        await _processPdf(pdfPath, password: _pdfPassword);
+        setState(() {
+          _error = 'Senha incorreta. Verifique a senha do PDF e tente novamente.';
+        });
         return;
       }
       setState(() {
@@ -409,7 +424,10 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
       }
       document.dispose();
       return buffer.toString();
-    } catch (_) {
+    } catch (error) {
+      if (_isPasswordError(error)) {
+        rethrow;
+      }
       return null;
     }
   }
@@ -929,14 +947,15 @@ class _EntryCard extends StatelessWidget {
             onChanged: onAmountChanged,
           ),
           const SizedBox(height: 8),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               ChoiceChip(
                 label: const Text('Despesa (-)'),
                 selected: !isPositive,
                 onSelected: (_) => onSignChanged(false),
               ),
-              const SizedBox(width: 8),
               ChoiceChip(
                 label: const Text('Credito (+)'),
                 selected: isPositive,
