@@ -84,7 +84,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: AnimatedBuilder(
-        animation: Listenable.merge([_receitasStore, _despesasStore, _carteiraStore]),
+        animation: Listenable.merge([
+          _receitasStore,
+          _despesasStore,
+          _carteiraStore,
+        ]),
         builder: (context, _) {
           if (!_receitasStore.isLoaded ||
               !_despesasStore.isLoaded ||
@@ -94,20 +98,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
           }
           final settings = AppSettingsScope.of(context);
           final now = DateTime.now();
-          final receitasMes = _receitasStore.totalForMonth(now);
-          final despesasMes = _despesasStore.totalForMonth(now);
+          final currentMonth = DateTime(now.year, now.month, 1);
+
+          final receitasMes = _receitasStore.totalForMonth(currentMonth);
+          final despesasMes = _despesasStore.totalForMonth(currentMonth);
+
           final double saldoMensal = receitasMes + despesasMes;
           final double saldoAposReserva = saldoMensal - widget.reserva;
           final double saldoAtual = _carteiraStore.totalBalance;
           final int periodMonths = _period.months;
-          final double receitasPeriodo =
-              _sumForPeriod(now, periodMonths, _receitasStore.totalForMonth);
-          final double despesasPeriodo =
-              _sumForPeriod(now, periodMonths, _despesasStore.totalForMonth);
-          final double saldoPeriodo = receitasPeriodo - despesasPeriodo;
+          final double receitasPeriodo = _sumForPeriod(
+            now,
+            periodMonths,
+            _receitasStore.totalForMonth,
+          );
+          final double despesasPeriodo = _sumForPeriod(
+            now,
+            periodMonths,
+            _despesasStore.totalForMonth,
+          );
+          final double saldoPeriodo = receitasPeriodo + despesasPeriodo;
           final double saldoMesAnterior =
-              _receitasStore.totalForMonth(_monthOffset(now, 1)) -
-                  _despesasStore.totalForMonth(_monthOffset(now, 1));
+              _receitasStore.totalForMonth(_monthOffset(now, 1)) +
+              _despesasStore.totalForMonth(_monthOffset(now, 1));
           final _Variation variation = _buildVariation(
             saldoMensal,
             saldoMesAnterior,
@@ -145,17 +158,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     saldoMensal: saldoMensal,
                     saldoAposReserva: saldoAposReserva,
                     saldoAtual: saldoAtual,
-                    segurancaAno: despesasMes * 12,
+                    segurancaAno: despesasMes.abs() * 12,
                   ),
                   const SizedBox(height: 16),
                   _ForecastCard(
                     months: _forecastMonths,
                     values: forecast.values,
                     monthLabels: forecast.months
-                        .map((date) => settings.shortMonthYearFormatter().format(date))
+                        .map(
+                          (date) =>
+                              settings.shortMonthYearFormatter().format(date),
+                        )
                         .toList(),
                     formatter: settings.currencyFormatter(),
-                    onChanged: (value) => setState(() => _forecastMonths = value),
+                    onChanged: (value) =>
+                        setState(() => _forecastMonths = value),
                   ),
                   const SizedBox(height: 20),
                   CarteiraWidget(
@@ -218,8 +235,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final hasSalary = _receitasStore.hasSalaryForMonth(month);
       final receitas = (hasSalary ? salary : lastSalary) + extras;
       final despesas = _despesasStore.totalForMonth(month);
-      final effectiveReceitas = receitas == 0 && despesas == 0 ? lastSalary : receitas;
-      final effectiveDespesas = receitas == 0 && despesas == 0 ? lastDespesas : despesas;
+      final effectiveReceitas = receitas == 0 && despesas == 0
+          ? lastSalary
+          : receitas;
+      final effectiveDespesas = receitas == 0 && despesas == 0
+          ? lastDespesas
+          : despesas;
       if (hasSalary && salary != 0) {
         lastSalary = salary;
       } else if (!hasSalary && receitas != 0) {
@@ -228,7 +249,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (despesas != 0) {
         lastDespesas = despesas;
       }
-      runningTotal += effectiveReceitas - effectiveDespesas;
+      runningTotal += effectiveReceitas + effectiveDespesas;
       values.add(runningTotal);
       labels.add(month);
     }
@@ -271,10 +292,7 @@ class _ForecastData {
   final List<double> values;
   final List<DateTime> months;
 
-  const _ForecastData({
-    required this.values,
-    required this.months,
-  });
+  const _ForecastData({required this.values, required this.months});
 }
 
 // Periodos disponiveis para filtros de saldo.
@@ -294,10 +312,7 @@ class _PeriodChips extends StatelessWidget {
   final DashboardPeriod selected;
   final ValueChanged<DashboardPeriod> onSelected;
 
-  const _PeriodChips({
-    required this.selected,
-    required this.onSelected,
-  });
+  const _PeriodChips({required this.selected, required this.onSelected});
 
   @override
   // Monta os chips de periodo.
@@ -353,9 +368,7 @@ class _PeriodChip extends StatelessWidget {
               : tokens.surfaceAlt,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: isSelected
-                ? tokens.borderStrong
-                : tokens.border,
+            color: isSelected ? tokens.borderStrong : tokens.border,
           ),
         ),
         child: Text(
@@ -391,7 +404,9 @@ class _HeroSaldoCard extends StatelessWidget {
   // Monta o card de saldo principal.
   Widget build(BuildContext context) {
     final tokens = AppThemeTokens.of(context);
-    final variationColor = variation.isPositive ? tokens.success : tokens.danger;
+    final variationColor = variation.isPositive
+        ? tokens.success
+        : tokens.danger;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -419,7 +434,10 @@ class _HeroSaldoCard extends StatelessWidget {
               const Spacer(),
               if (variation.isAvailable)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: variationColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(999),
@@ -447,10 +465,7 @@ class _HeroSaldoCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Text(
-                periodLabel,
-                style: TextStyle(color: tokens.textSecondary),
-              ),
+              Text(periodLabel, style: TextStyle(color: tokens.textSecondary)),
               const Spacer(),
               Text(
                 formatter.format(saldoPeriodo),
@@ -479,10 +494,11 @@ class _Variation {
     required this.isAvailable,
   });
 
-  const _Variation.unavailable() : this._(diff: 0, percent: 0, isAvailable: false);
+  const _Variation.unavailable()
+    : this._(diff: 0, percent: 0, isAvailable: false);
 
   const _Variation.available({required this.diff, required this.percent})
-      : isAvailable = true;
+    : isAvailable = true;
 
   // Indica se a variacao e positiva.
   bool get isPositive => diff >= 0;
@@ -554,7 +570,7 @@ class _ForecastCard extends StatelessWidget {
           Row(
             children: [
               Text(
-                'Projecao futura',
+                'Projeção Futura',
                 style: TextStyle(
                   color: tokens.textPrimary,
                   fontWeight: FontWeight.w700,
@@ -584,7 +600,11 @@ class _ForecastCard extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 trendLabel,
-                style: TextStyle(color: trendColor, fontSize: 12, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: trendColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(width: 8),
               Text(
@@ -689,18 +709,16 @@ class _ForecastChartPainter extends CustomPainter {
     final axisY = hasZero && range != 0.0
         ? size.height - (((0 - min) / range) * (size.height - 16)) - 8
         : size.height - 8;
-    canvas.drawLine(
-      Offset(0, axisY),
-      Offset(size.width, axisY),
-      axisPaint,
-    );
+    canvas.drawLine(Offset(0, axisY), Offset(size.width, axisY), axisPaint);
 
     final path = Path();
     for (var i = 0; i < values.length; i++) {
       final x = (i / (values.length - 1)) * size.width;
       final y = range == 0.0
           ? size.height / 2
-          : size.height - (((values[i] - min) / range) * (size.height - 16)) - 8;
+          : size.height -
+                (((values[i] - min) / range) * (size.height - 16)) -
+                8;
       if (i == 0) {
         path.moveTo(x, y);
       } else {
@@ -714,7 +732,9 @@ class _ForecastChartPainter extends CustomPainter {
       final x = (i / (values.length - 1)) * size.width;
       final y = range == 0.0
           ? size.height / 2
-          : size.height - (((values[i] - min) / range) * (size.height - 16)) - 8;
+          : size.height -
+                (((values[i] - min) / range) * (size.height - 16)) -
+                8;
       canvas.drawCircle(Offset(x, y), 2.2, dotPaint);
     }
 
@@ -725,7 +745,14 @@ class _ForecastChartPainter extends CustomPainter {
         fontWeight: FontWeight.w600,
       );
       _drawPointLabel(canvas, size, 0, values.first, range, labelStyle);
-      _drawPointLabel(canvas, size, values.length - 1, values.last, range, labelStyle);
+      _drawPointLabel(
+        canvas,
+        size,
+        values.length - 1,
+        values.last,
+        range,
+        labelStyle,
+      );
     }
   }
 
@@ -758,7 +785,10 @@ class _ForecastChartPainter extends CustomPainter {
       maxLines: 1,
     )..layout();
     final dx = (x - painter.width / 2).clamp(0.0, size.width - painter.width);
-    final dy = (y - painter.height - 6).clamp(0.0, size.height - painter.height);
+    final dy = (y - painter.height - 6).clamp(
+      0.0,
+      size.height - painter.height,
+    );
     painter.paint(canvas, Offset(dx, dy));
   }
 }

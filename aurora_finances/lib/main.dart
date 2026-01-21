@@ -15,9 +15,7 @@ import 'widgets/app_settings_scope.dart';
 // Ponto de entrada do app.
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await initializeDateFormatting('pt_BR', null);
   await initializeDateFormatting('en_US', null);
   await initializeDateFormatting('es_ES', null);
@@ -65,9 +63,7 @@ class FinanceApp extends StatelessWidget {
               final mediaQuery = MediaQuery.of(context);
               final scale = settingsStore.textScaleFactor();
               return MediaQuery(
-                data: mediaQuery.copyWith(
-                  textScaler: TextScaler.linear(scale),
-                ),
+                data: mediaQuery.copyWith(textScaler: TextScaler.linear(scale)),
                 child: child ?? const SizedBox.shrink(),
               );
             },
