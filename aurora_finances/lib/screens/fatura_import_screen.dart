@@ -19,27 +19,27 @@ import '../widgets/aurora_scaffold.dart';
 import '../theme/app_tokens.dart';
 
 // Tela de importacao de faturas (PDF) com OCR e revisao manual.
-class FaturaImportScreen extends StatefulWidget {
-  final DespesasStore despesasStore;
-  final CategoriesStore categoriesStore;
+class InvoiceImportScreen extends StatefulWidget {
+  final ExpensesStore expensesStore;
+  final CategoriesStore entryCategoriesStore;
 
-  const FaturaImportScreen({
+  const InvoiceImportScreen({
     super.key,
-    required this.despesasStore,
-    required this.categoriesStore,
+    required this.expensesStore,
+    required this.entryCategoriesStore,
   });
 
   @override
-  State<FaturaImportScreen> createState() => _FaturaImportScreenState();
+  State<InvoiceImportScreen> createState() => _InvoiceImportScreenState();
 }
 
 // Estado da importacao com OCR, parsing e edicao local.
-class _FaturaImportScreenState extends State<FaturaImportScreen> {
+class _InvoiceImportScreenState extends State<InvoiceImportScreen> {
   final TextRecognizer _textRecognizer =
       TextRecognizer(script: TextRecognitionScript.latin);
   final ScrollController _scrollController = ScrollController();
   final List<_DraftEntry> _entries = [];
-  _ColumnOption? _selectedColumn;
+  _SubcategoryOption? _selectedSubcategory;
   bool _isProcessing = false;
   String? _error;
   String? _pdfPassword;
@@ -49,11 +49,11 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   @override
   void initState() {
     super.initState();
-    if (!widget.despesasStore.isLoaded) {
-      widget.despesasStore.load();
+    if (!widget.expensesStore.isLoaded) {
+      widget.expensesStore.load();
     }
-    if (!widget.categoriesStore.isLoaded) {
-      widget.categoriesStore.load();
+    if (!widget.entryCategoriesStore.isLoaded) {
+      widget.entryCategoriesStore.load();
     }
   }
 
@@ -73,10 +73,10 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   // Monta a tela principal e mantem estado do filtro de cartao.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
-    final categories = widget.categoriesStore.categories.toList();
-    final options = _columnOptions();
-    if (_selectedColumn != null && !options.contains(_selectedColumn)) {
-      _selectedColumn = null;
+    final categories = widget.entryCategoriesStore.categories.toList();
+    final options = _subcategoryOptions();
+    if (_selectedSubcategory != null && !options.contains(_selectedSubcategory)) {
+      _selectedSubcategory = null;
     }
 
     return AuroraScaffold(
@@ -133,25 +133,25 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   // Monta a secao de selecao de cartao.
-  Widget _buildCardSection(List<_ColumnOption> options) {
-    // Seleciona a coluna (cartao) de destino das despesas importadas.
+  Widget _buildCardSection(List<_SubcategoryOption> options) {
+    // Seleciona a subcategoria (cartao) de destino das despesas importadas.
     final tokens = AppThemeTokens.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionTitle('Cartao de credito'),
-        DropdownButtonFormField<_ColumnOption>(
-          key: ValueKey(_selectedColumn?.column.id ?? 'none'),
-          initialValue: _selectedColumn,
+        DropdownButtonFormField<_SubcategoryOption>(
+          key: ValueKey(_selectedSubcategory?.subcategory.id ?? 'none'),
+          initialValue: _selectedSubcategory,
           isExpanded: true,
-          decoration: _dropdownDecoration('Escolha a coluna do cartao'),
+          decoration: _dropdownDecoration('Escolha a subcategoria do cartao'),
           dropdownColor: tokens.surface,
           items: options
               .map(
                 (option) => DropdownMenuItem(
                   value: option,
                   child: Text(
-                    '${option.group.title} - ${option.column.title}',
+                    '${option.category.title} - ${option.subcategory.title}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -159,13 +159,13 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
               )
               .toList(),
           onChanged: (value) {
-            setState(() => _selectedColumn = value);
+            setState(() => _selectedSubcategory = value);
           },
         ),
         if (options.isEmpty) ...[
           const SizedBox(height: 8),
           Text(
-            'Crie um grupo/coluna de despesas detalhadas para importar a fatura.',
+            'Crie uma categoria/subcategoria com lancamentos detalhados para importar.',
             style: TextStyle(color: tokens.textSecondary),
           ),
         ],
@@ -293,14 +293,16 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
     );
   }
 
-  // Monta opcoes de colunas (cartoes).
-  List<_ColumnOption> _columnOptions() {
-    // Lista apenas colunas que aceitam lancamentos detalhados.
-    final options = <_ColumnOption>[];
-    for (final group in widget.despesasStore.groups) {
-      for (final column in group.columns) {
-        if (!column.requiresEntries) continue;
-        options.add(_ColumnOption(group: group, column: column));
+  // Monta opcoes de subcategorias (cartoes).
+  List<_SubcategoryOption> _subcategoryOptions() {
+    // Lista apenas subcategorias que aceitam lancamentos detalhados.
+    final options = <_SubcategoryOption>[];
+    for (final category in widget.expensesStore.categories) {
+      for (final subcategory in category.subcategories) {
+        if (!subcategory.requiresEntries) continue;
+        options.add(
+          _SubcategoryOption(category: category, subcategory: subcategory),
+        );
       }
     }
     return options;
@@ -311,9 +313,9 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
     setState(() {
       _error = null;
     });
-    if (_selectedColumn == null) {
+    if (_selectedSubcategory == null) {
       setState(() {
-        _error = 'Selecione a coluna do cartao antes de importar.';
+        _error = 'Selecione a subcategoria do cartao antes de importar.';
       });
       return;
     }
@@ -368,7 +370,7 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
         return;
       }
 
-      final categories = widget.categoriesStore.categories.toList();
+      final categories = widget.entryCategoriesStore.categories.toList();
       final drafts = extracted.map((item) {
         final inferredCategory = InvoiceParser.inferCategory(
           item.description,
@@ -626,10 +628,10 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   }
 
   Future<void> _saveEntries(AppSettingsStore settings) async {
-    // Persiste lancamentos na coluna selecionada.
-    final column = _selectedColumn?.column;
-    if (column == null) {
-      _showSnack('Selecione a coluna do cartao.');
+  // Persiste lancamentos na subcategoria selecionada.
+    final subcategory = _selectedSubcategory?.subcategory;
+    if (subcategory == null) {
+      _showSnack('Selecione a subcategoria do cartao.');
       return;
     }
 
@@ -639,13 +641,13 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
 
     for (final entry in _entries) {
       if (entry.isInstallment && entry.installmentCount > 1) {
-        _addInstallments(entry, column.id, referenceDate: _referenceMonth);
+        _addInstallments(entry, subcategory.id, referenceDate: _referenceMonth);
         continue;
       }
-      widget.despesasStore.addEntry(
+      widget.expensesStore.addEntry(
         ExpenseEntry(
-          id: widget.despesasStore.nextId(),
-          columnId: column.id,
+          id: widget.expensesStore.nextId(),
+          subcategoryId: subcategory.id,
           date: _dateForReferenceMonth(entry.purchaseDate, _referenceMonth),
           category: entry.category,
           reason: entry.reason,
@@ -664,17 +666,17 @@ class _FaturaImportScreenState extends State<FaturaImportScreen> {
   // Gera lancamentos parcelados a partir de uma compra.
   void _addInstallments(
     _DraftEntry entry,
-    String columnId, {
+    String subcategoryId, {
     required DateTime referenceDate,
   }) {
     // Gera parcelas futuras quando o item eh parcelado.
     final count = entry.installmentCount;
     final index = entry.installmentIndex;
     for (var i = index; i <= count; i++) {
-      widget.despesasStore.addEntry(
+      widget.expensesStore.addEntry(
         ExpenseEntry(
-          id: widget.despesasStore.nextId(),
-          columnId: columnId,
+          id: widget.expensesStore.nextId(),
+          subcategoryId: subcategoryId,
           date: _installmentDateFromReference(
             referenceDate: referenceDate,
             purchaseDate: entry.purchaseDate,
@@ -818,24 +820,27 @@ class _DraftEntry {
   }
 }
 
-// Opcao de coluna/cartao disponivel.
-class _ColumnOption {
-  final ExpenseGroup group;
-  final ExpenseColumn column;
+// Opcao de subcategoria/cartao disponivel.
+class _SubcategoryOption {
+  final ExpenseCategory category;
+  final ExpenseSubcategory subcategory;
 
-  // Identifica uma coluna de destino (grupo + coluna).
-  const _ColumnOption({required this.group, required this.column});
+  // Identifica uma subcategoria de destino (categoria + subcategoria).
+  const _SubcategoryOption({
+    required this.category,
+    required this.subcategory,
+  });
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is _ColumnOption &&
-        other.group.id == group.id &&
-        other.column.id == column.id;
+    return other is _SubcategoryOption &&
+        other.category.id == category.id &&
+        other.subcategory.id == subcategory.id;
   }
 
   @override
-  int get hashCode => Object.hash(group.id, column.id);
+  int get hashCode => Object.hash(category.id, subcategory.id);
 }
 
 // Card de edicao de um lancamento importado.

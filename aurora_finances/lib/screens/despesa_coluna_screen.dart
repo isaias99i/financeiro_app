@@ -13,34 +13,36 @@ import '../screens/categorias_screen.dart';
 import '../widgets/app_settings_scope.dart';
 import '../theme/app_tokens.dart';
 
-// Tela de lancamentos detalhados de uma coluna.
-class DespesaColunaScreen extends StatefulWidget {
-  final DespesasStore store;
-  final CategoriesStore categoriesStore;
-  final ExpenseGroup group;
-  final ExpenseColumn column;
+// Tela de lancamentos detalhados de uma subcategoria de despesas.
+class ExpenseSubcategoryEntriesScreen extends StatefulWidget {
+  final ExpensesStore expensesStore;
+  final CategoriesStore entryCategoriesStore;
+  final ExpenseCategory category;
+  final ExpenseSubcategory subcategory;
   final DateTime initialMonth;
 
-  const DespesaColunaScreen({
+  const ExpenseSubcategoryEntriesScreen({
     super.key,
-    required this.store,
-    required this.categoriesStore,
-    required this.group,
-    required this.column,
+    required this.expensesStore,
+    required this.entryCategoriesStore,
+    required this.category,
+    required this.subcategory,
     required this.initialMonth,
   });
 
   @override
-  // Cria o estado da tela de coluna.
-  State<DespesaColunaScreen> createState() => _DespesaColunaScreenState();
+  // Cria o estado da tela de subcategoria.
+  State<ExpenseSubcategoryEntriesScreen> createState() =>
+      _ExpenseSubcategoryEntriesScreenState();
 }
 
-// Estado da coluna com filtro por mes.
-class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
+// Estado da tela de subcategoria com filtro por mes.
+class _ExpenseSubcategoryEntriesScreenState
+    extends State<ExpenseSubcategoryEntriesScreen> {
   late DateTime _selectedMonth;
 
   @override
-  // Inicializa o mes selecionado e categorias.
+  // Inicializa o mes selecionado e garante categorias carregadas.
   void initState() {
     super.initState();
     _selectedMonth = DateTime(
@@ -48,13 +50,13 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
       widget.initialMonth.month,
       1,
     );
-    if (!widget.categoriesStore.isLoaded) {
-      widget.categoriesStore.load();
+    if (!widget.entryCategoriesStore.isLoaded) {
+      widget.entryCategoriesStore.load();
     }
   }
 
   @override
-  // Monta a UI com lista de lancamentos.
+  // Monta a UI com resumo e lista de lancamentos.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
     final tokens = AppThemeTokens.of(context);
@@ -64,7 +66,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
 
     return AuroraScaffold(
       appBar: AppBar(
-        title: Text(widget.column.title),
+        title: Text(widget.subcategory.title),
         actions: [
           IconButton(
             onPressed: () => _pickMonth(context),
@@ -88,11 +90,10 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
         child: const Icon(Icons.add),
       ),
       body: AnimatedBuilder(
-        animation: widget.store,
+        animation: widget.expensesStore,
         builder: (context, _) {
-          final entries = _entriesForMonth();
-          final total = entries.fold<double>(0.0, (sum, entry) => sum + entry.amount);
-
+          final entries = _entriesForSelectedMonth();
+          final total = _totalForEntries(entries);
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -105,47 +106,12 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                 ),
                 const SizedBox(height: 12),
                 Expanded(
-                  child: entries.isEmpty
-                      ? _EmptyEntries(onAdd: _showAddDialog)
-                      : ListView.separated(
-                          itemCount: entries.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 10),
-                          itemBuilder: (context, index) {
-                            final entry = entries[index];
-                            return Card(
-                              color: tokens.surfaceAlt,
-                              child: ListTile(
-                                onTap: () => _showEditDialog(entry),
-                                leading: Icon(Icons.receipt_long, color: tokens.textSecondary),
-                                title: Text(
-                                  entry.category.isEmpty ? 'Sem categoria' : entry.category,
-                                  style: TextStyle(color: tokens.textPrimary),
-                                ),
-                                subtitle: Text(
-                                  _subtitleForEntry(entry, dateFormatter),
-                                  style: TextStyle(color: tokens.textSecondary),
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      moneyFormatter.format(entry.amount),
-                                      style: TextStyle(
-                                        color: tokens.textPrimary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    IconButton(
-                                      onPressed: () => _removeEntry(entry),
-                                      icon: Icon(Icons.delete_outline, color: tokens.textSecondary),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                  child: _buildEntriesList(
+                    entries: entries,
+                    dateFormatter: dateFormatter,
+                    moneyFormatter: moneyFormatter,
+                    tokens: tokens,
+                  ),
                 ),
               ],
             ),
@@ -155,9 +121,10 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
     );
   }
 
-  // Filtra e ordena entradas do mes.
-  List<ExpenseEntry> _entriesForMonth() {
-    final entries = widget.store.entriesForColumn(widget.column);
+  // Filtra e ordena entradas do mes selecionado.
+  List<ExpenseEntry> _entriesForSelectedMonth() {
+    final entries =
+        widget.expensesStore.entriesForSubcategory(widget.subcategory);
     final filtered = entries
         .where((entry) => isSameMonth(entry.date, _selectedMonth))
         .toList();
@@ -167,6 +134,63 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
       return aDate.compareTo(bDate);
     });
     return filtered;
+  }
+
+  // Soma o total de uma lista de lancamentos.
+  double _totalForEntries(List<ExpenseEntry> entries) {
+    return entries.fold<double>(0.0, (sum, entry) => sum + entry.amount);
+  }
+
+  // Monta a lista de lancamentos ou estado vazio.
+  Widget _buildEntriesList({
+    required List<ExpenseEntry> entries,
+    required DateFormat dateFormatter,
+    required NumberFormat moneyFormatter,
+    required AppThemeTokens tokens,
+  }) {
+    if (entries.isEmpty) {
+      return _EmptyEntries(onAdd: _showAddDialog);
+    }
+
+    return ListView.separated(
+      itemCount: entries.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final entry = entries[index];
+        return Card(
+          color: tokens.surfaceAlt,
+          child: ListTile(
+            onTap: () => _showEditDialog(entry),
+            leading: Icon(Icons.receipt_long, color: tokens.textSecondary),
+            title: Text(
+              entry.category.isEmpty ? 'Sem categoria' : entry.category,
+              style: TextStyle(color: tokens.textPrimary),
+            ),
+            subtitle: Text(
+              _subtitleForEntry(entry, dateFormatter),
+              style: TextStyle(color: tokens.textSecondary),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  moneyFormatter.format(entry.amount),
+                  style: TextStyle(
+                    color: tokens.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                IconButton(
+                  onPressed: () => _removeEntry(entry),
+                  icon: Icon(Icons.delete_outline, color: tokens.textSecondary),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   // Abre o seletor de mes.
@@ -186,7 +210,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
   Future<void> _confirmClearMonthEntries() async {
     final settings = AppSettingsScope.of(context);
     final monthLabel = settings.monthYearFormatter().format(_selectedMonth);
-    final entries = _entriesForMonth();
+    final entries = _entriesForSelectedMonth();
     if (entries.isEmpty) {
       _showSnack('Nao ha movimentacoes neste mes.');
       return;
@@ -218,7 +242,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
   void _clearMonthEntries(List<ExpenseEntry> entries) {
     final ids = entries.map((entry) => entry.id).toList();
     for (final id in ids) {
-      widget.store.removeEntry(id);
+      widget.expensesStore.removeEntry(id);
     }
     _showSnack('Movimentacoes removidas.');
   }
@@ -251,7 +275,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
       text: entry?.installmentIndex?.toString() ?? '1',
     );
     DateTime purchaseDate = entry?.purchaseDate ?? _selectedMonth;
-    final categoryList = widget.categoriesStore.categories.toList();
+    final categoryList = widget.entryCategoriesStore.categories.toList();
     final entryCategory = entry?.category.trim() ?? '';
     if (entryCategory.isNotEmpty && !categoryList.contains(entryCategory)) {
       categoryList.insert(0, entryCategory);
@@ -469,10 +493,10 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                       final nextPurchaseDate = purchaseDate;
                       final clearInstallments = entry?.isInstallment == true;
                       if (entry == null) {
-                        widget.store.addEntry(
+                        widget.expensesStore.addEntry(
                           ExpenseEntry(
                             id: _nextEntryId(),
-                            columnId: widget.column.id,
+                            subcategoryId: widget.subcategory.id,
                             date: selectedDate,
                             category: selectedCategory ?? '',
                             reason: reasonController.text.trim(),
@@ -481,7 +505,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
                           ),
                         );
                       } else {
-                        widget.store.updateEntry(
+                        widget.expensesStore.updateEntry(
                           entry.id,
                           entry.copyWith(
                             date: selectedDate,
@@ -521,7 +545,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
     required String reason,
   }) {
     if (entry != null) {
-      widget.store.updateEntry(
+      widget.expensesStore.updateEntry(
         entry.id,
         entry.copyWith(
           date: entry.date,
@@ -537,10 +561,10 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
     }
 
     for (var i = index; i <= count; i++) {
-      widget.store.addEntry(
+      widget.expensesStore.addEntry(
         ExpenseEntry(
           id: _nextEntryId(),
-          columnId: widget.column.id,
+          subcategoryId: widget.subcategory.id,
           date: _installmentDate(purchaseDate, i),
           category: category,
           reason: reason,
@@ -578,7 +602,7 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
 
   // Gera o proximo id de entrada.
   String _nextEntryId() {
-    return widget.store.nextId();
+    return widget.expensesStore.nextId();
   }
 
   // Abre o seletor de data.
@@ -598,9 +622,9 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
     );
   }
 
-  // Remove um gasto da coluna.
+  // Remove um gasto da subcategoria.
   void _removeEntry(ExpenseEntry entry) {
-    widget.store.removeEntry(entry.id);
+    widget.expensesStore.removeEntry(entry.id);
     _showSnack('Gasto removido');
   }
 
@@ -622,7 +646,8 @@ class _DespesaColunaScreenState extends State<DespesaColunaScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CategoriasScreen(store: widget.categoriesStore),
+        builder: (context) =>
+            CategoriesScreen(store: widget.entryCategoriesStore),
       ),
     );
   }
@@ -686,7 +711,7 @@ class _HeaderSummary extends StatelessWidget {
   }
 }
 
-// Estado vazio para coluna sem lancamentos.
+// Estado vazio para subcategoria sem lancamentos.
 class _EmptyEntries extends StatelessWidget {
   final VoidCallback onAdd;
 

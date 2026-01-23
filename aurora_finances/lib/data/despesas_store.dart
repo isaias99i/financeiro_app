@@ -6,10 +6,9 @@ import 'package:flutter/foundation.dart';
 import '../models/despesas_models.dart';
 import '../utils/month_key.dart';
 
-
 // Store de despesas por usuario.
-class DespesasStore extends ChangeNotifier {
-  DespesasStore({
+class ExpensesStore extends ChangeNotifier {
+  ExpensesStore({
     required this.userId,
     FirebaseFirestore? firestore,
   }) : _firestore = firestore ?? FirebaseFirestore.instance;
@@ -17,42 +16,50 @@ class DespesasStore extends ChangeNotifier {
   final String userId;
   final FirebaseFirestore _firestore;
 
-  final List<ExpenseGroup> _groups = [];
+  final List<ExpenseCategory> _categories = [];
   final List<ExpenseEntry> _entries = [];
-  final Map<String, double> _simpleValues = {};
+  final Map<String, double> _fixedValues = {};
   int _idCounter = 0;
   bool _isLoaded = false;
 
   // Indica se os dados foram carregados.
   bool get isLoaded => _isLoaded;
-  // Lista imutavel de grupos.
-  UnmodifiableListView<ExpenseGroup> get groups => UnmodifiableListView(_groups);
+  // Lista imutavel de categorias.
+  UnmodifiableListView<ExpenseCategory> get categories =>
+      UnmodifiableListView(_categories);
   // Lista imutavel de lancamentos.
-  UnmodifiableListView<ExpenseEntry> get entries => UnmodifiableListView(_entries);
+  UnmodifiableListView<ExpenseEntry> get entries =>
+      UnmodifiableListView(_entries);
+
+  // Mantem chaves legadas para compatibilidade com dados persistidos.
+  static const String _legacyCategoryListKey = 'groups';
+  static const String _legacyEntryListKey = 'entries';
+  static const String _legacyFixedValuesKey = 'simpleValues';
 
   // Carrega despesas do Firestore.
   Future<void> load() async {
     final doc = await _docRef().get();
-    _groups.clear();
+    _categories.clear();
     _entries.clear();
-    _simpleValues.clear();
+    _fixedValues.clear();
     if (doc.exists) {
       final data = doc.data() ?? <String, dynamic>{};
-      final groupsRaw = data['groups'] as List<dynamic>? ?? [];
-      for (final item in groupsRaw) {
+      final categoriesRaw = data[_legacyCategoryListKey] as List<dynamic>? ?? [];
+      for (final item in categoriesRaw) {
         final map = item as Map<String, dynamic>;
-        _groups.add(ExpenseGroup.fromJson(map));
+        _categories.add(ExpenseCategory.fromJson(map));
       }
-      final entriesRaw = data['entries'] as List<dynamic>? ?? [];
+      final entriesRaw = data[_legacyEntryListKey] as List<dynamic>? ?? [];
       _entries.addAll(
         entriesRaw
             .map((item) => ExpenseEntry.fromJson(item as Map<String, dynamic>))
             .toList(),
       );
-      final simpleValuesRaw = data['simpleValues'] as Map<String, dynamic>? ?? {};
-      simpleValuesRaw.forEach((key, value) {
+      final fixedValuesRaw =
+          data[_legacyFixedValuesKey] as Map<String, dynamic>? ?? {};
+      fixedValuesRaw.forEach((key, value) {
         if (value is num) {
-          _simpleValues[key] = value.toDouble();
+          _fixedValues[key] = value.toDouble();
         }
       });
     }
@@ -61,70 +68,91 @@ class DespesasStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Cria um novo grupo de despesas.
-  void addGroup(String title) {
-    _groups.add(ExpenseGroup(id: _nextId(), title: title, columns: []));
-    _persist();
-    notifyListeners();
-  }
-
-  // Atualiza o nome de um grupo.
-  void updateGroup(ExpenseGroup group, String title) {
-    group.title = title;
-    _persist();
-    notifyListeners();
-  }
-
-  // Remove um grupo e seus dados.
-  void removeGroup(ExpenseGroup group) {
-    _groups.removeWhere((item) => item.id == group.id);
-    _persist();
-    notifyListeners();
-  }
-
-  // Reordena categorias.
-  void reorderGroups(int oldIndex, int newIndex) {
-    if (newIndex > oldIndex) {
-      newIndex -= 1;
-    }
-    final group = _groups.removeAt(oldIndex);
-    _groups.insert(newIndex, group);
-    _persist();
-    notifyListeners();
-  }
-
-  // Adiciona coluna dentro de um grupo.
-  void addColumn(ExpenseGroup group, String title, {required bool requiresEntries}) {
-    group.columns.add(
-      ExpenseColumn(id: _nextId(), title: title, requiresEntries: requiresEntries),
+  // Cria uma nova categoria de despesas.
+  void addCategory(String title) {
+    _categories.add(
+      ExpenseCategory(id: _nextId(), title: title, subcategories: []),
     );
     _persist();
     notifyListeners();
   }
 
-  // Atualiza o nome da coluna.
-  void updateColumn(ExpenseGroup group, ExpenseColumn column, String title) {
-    column.title = title;
+  // Atualiza o nome de uma categoria.
+  void updateCategory(ExpenseCategory category, String title) {
+    category.title = title;
     _persist();
     notifyListeners();
   }
 
-  // Remove coluna e itens associados.
-  void removeColumn(ExpenseGroup group, ExpenseColumn column) {
-    group.columns.removeWhere((item) => item.id == column.id);
-    _entries.removeWhere((entry) => entry.columnId == column.id);
-    _simpleValues.removeWhere((key, _) => key.endsWith('|${column.id}'));
+  // Remove uma categoria e seus dados.
+  void removeCategory(ExpenseCategory category) {
+    _categories.removeWhere((item) => item.id == category.id);
+    _persist();
+    notifyListeners();
+  }
+
+  // Reordena categorias.
+  void reorderCategories(int oldIndex, int newIndex) {
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
+    }
+    final category = _categories.removeAt(oldIndex);
+    _categories.insert(newIndex, category);
+    _persist();
+    notifyListeners();
+  }
+
+  // Adiciona subcategoria dentro de uma categoria.
+  void addSubcategory(
+    ExpenseCategory category,
+    String title, {
+    required bool requiresEntries,
+  }) {
+    category.subcategories.add(
+      ExpenseSubcategory(
+        id: _nextId(),
+        title: title,
+        requiresEntries: requiresEntries,
+      ),
+    );
+    _persist();
+    notifyListeners();
+  }
+
+  // Atualiza o nome da subcategoria.
+  void updateSubcategory(
+    ExpenseCategory category,
+    ExpenseSubcategory subcategory,
+    String title,
+  ) {
+    subcategory.title = title;
+    _persist();
+    notifyListeners();
+  }
+
+  // Remove subcategoria e itens associados.
+  void removeSubcategory(
+    ExpenseCategory category,
+    ExpenseSubcategory subcategory,
+  ) {
+    category.subcategories.removeWhere((item) => item.id == subcategory.id);
+    _entries.removeWhere((entry) => entry.subcategoryId == subcategory.id);
+    _fixedValues.removeWhere((key, _) => key.endsWith('|${subcategory.id}'));
     _persist();
     notifyListeners();
   }
 
   // Reordena subcategorias dentro de uma categoria.
-  void reorderColumns(ExpenseGroup group, int oldIndex, int newIndex) {
+  void reorderSubcategories(
+    ExpenseCategory category,
+    int oldIndex,
+    int newIndex,
+  ) {
     if (newIndex > oldIndex) {
       newIndex -= 1;
     }
-    final column = group.columns.removeAt(oldIndex);
-    group.columns.insert(newIndex, column);
+    final subcategory = category.subcategories.removeAt(oldIndex);
+    category.subcategories.insert(newIndex, subcategory);
     _persist();
     notifyListeners();
   }
@@ -132,64 +160,72 @@ class DespesasStore extends ChangeNotifier {
   // Soma total do mes.
   double totalForMonth(DateTime month) {
     var total = 0.0;
-    for (final group in _groups) {
-      for (final column in group.columns) {
-        total += totalForColumn(month, column);
+    for (final category in _categories) {
+      for (final subcategory in category.subcategories) {
+        total += totalForSubcategory(month, subcategory);
       }
     }
     return total;
   }
 
-  // Soma total de um grupo no mes.
-  double totalForGroup(DateTime month, ExpenseGroup group) {
+  // Soma total de uma categoria no mes.
+  double totalForCategory(DateTime month, ExpenseCategory category) {
     var total = 0.0;
-    for (final column in group.columns) {
-      total += totalForColumn(month, column);
+    for (final subcategory in category.subcategories) {
+      total += totalForSubcategory(month, subcategory);
     }
     return total;
   }
 
-  // Soma total de uma coluna no mes.
-  double totalForColumn(DateTime month, ExpenseColumn column) {
-    if (!column.requiresEntries) {
-      return valueForColumn(month, column);
+  // Soma total de uma subcategoria no mes.
+  double totalForSubcategory(DateTime month, ExpenseSubcategory subcategory) {
+    if (!subcategory.requiresEntries) {
+      return valueForSubcategory(month, subcategory);
     }
     var total = 0.0;
     for (final entry in _entries) {
-      if (entry.columnId == column.id && isSameMonth(entry.date, month)) {
+      if (entry.subcategoryId == subcategory.id &&
+          isSameMonth(entry.date, month)) {
         total += entry.amount;
       }
     }
     return total;
   }
 
-  // Conta lancamentos de uma coluna no mes.
-  int countForColumn(DateTime month, ExpenseColumn column) {
-    if (!column.requiresEntries) {
+  // Conta lancamentos de uma subcategoria no mes.
+  int countForSubcategory(DateTime month, ExpenseSubcategory subcategory) {
+    if (!subcategory.requiresEntries) {
       return 0;
     }
     var count = 0;
     for (final entry in _entries) {
-      if (entry.columnId == column.id && isSameMonth(entry.date, month)) {
+      if (entry.subcategoryId == subcategory.id &&
+          isSameMonth(entry.date, month)) {
         count += 1;
       }
     }
     return count;
   }
 
-  // Retorna lancamentos de uma coluna.
-  List<ExpenseEntry> entriesForColumn(ExpenseColumn column) {
-    return _entries.where((entry) => entry.columnId == column.id).toList();
+  // Retorna lancamentos de uma subcategoria.
+  List<ExpenseEntry> entriesForSubcategory(ExpenseSubcategory subcategory) {
+    return _entries
+        .where((entry) => entry.subcategoryId == subcategory.id)
+        .toList();
   }
 
-  // Retorna valor simples para coluna fixa.
-  double valueForColumn(DateTime month, ExpenseColumn column) {
-    return _simpleValues[_simpleKey(month, column.id)] ?? 0.0;
+  // Retorna valor fixo para subcategoria sem lancamentos.
+  double valueForSubcategory(DateTime month, ExpenseSubcategory subcategory) {
+    return _fixedValues[_fixedValueKey(month, subcategory.id)] ?? 0.0;
   }
 
-  // Define valor simples para coluna fixa.
-  void setValueForColumn(DateTime month, ExpenseColumn column, double value) {
-    _simpleValues[_simpleKey(month, column.id)] = value;
+  // Define valor fixo para subcategoria sem lancamentos.
+  void setValueForSubcategory(
+    DateTime month,
+    ExpenseSubcategory subcategory,
+    double value,
+  ) {
+    _fixedValues[_fixedValueKey(month, subcategory.id)] = value;
     _persist();
     notifyListeners();
   }
@@ -198,13 +234,13 @@ class DespesasStore extends ChangeNotifier {
   void setFixedValueFromMonth(
     DateTime start,
     DateTime end,
-    ExpenseColumn column,
+    ExpenseSubcategory subcategory,
     double value,
   ) {
     var current = DateTime(start.year, start.month, 1);
     final last = DateTime(end.year, end.month, 1);
     while (!current.isAfter(last)) {
-      _simpleValues[_simpleKey(current, column.id)] = value;
+      _fixedValues[_fixedValueKey(current, subcategory.id)] = value;
       current = DateTime(current.year, current.month + 1, 1);
     }
     _persist();
@@ -236,20 +272,20 @@ class DespesasStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Persiste grupos, lancamentos e valores fixos.
+  // Persiste categorias, lancamentos e valores fixos.
   void _persist() {
     if (!_isLoaded) return;
     final payload = {
-      'groups': _groups.map((g) => g.toJson()).toList(),
-      'entries': _entries.map((entry) => entry.toJson()).toList(),
-      'simpleValues': _simpleValues,
+      _legacyCategoryListKey: _categories.map((c) => c.toJson()).toList(),
+      _legacyEntryListKey: _entries.map((entry) => entry.toJson()).toList(),
+      _legacyFixedValuesKey: _fixedValues,
     };
     _docRef().set(payload);
   }
 
   // Monta chave unica para valores fixos.
-  static String _simpleKey(DateTime month, String columnId) {
-    return '${monthKey(month)}|$columnId';
+  static String _fixedValueKey(DateTime month, String subcategoryId) {
+    return '${monthKey(month)}|$subcategoryId';
   }
 
   // Gera id publico para novos lancamentos.

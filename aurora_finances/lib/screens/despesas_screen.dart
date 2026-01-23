@@ -14,58 +14,58 @@ import '../widgets/app_settings_scope.dart';
 import '../theme/app_layout.dart';
 import '../theme/app_tokens.dart';
 
-// Tela de despesas com categorias e itens de gasto.
-class DespesasScreen extends StatefulWidget {
-  final DespesasStore store;
-  final CategoriesStore categoriesStore;
+// Tela de despesas com categorias e subcategorias.
+class ExpensesScreen extends StatefulWidget {
+  final ExpensesStore expensesStore;
+  final CategoriesStore entryCategoriesStore;
 
-  const DespesasScreen({
+  const ExpensesScreen({
     super.key,
-    required this.store,
-    required this.categoriesStore,
+    required this.expensesStore,
+    required this.entryCategoriesStore,
   });
 
   @override
   // Cria o estado da tela de despesas.
-  State<DespesasScreen> createState() => _DespesasScreenState();
+  State<ExpensesScreen> createState() => _ExpensesScreenState();
 }
 
 // Estado da tela de despesas com navegacao de meses.
-class _DespesasScreenState extends State<DespesasScreen> {
-  static final DateTime _startDate = DateTime(2026, 1, 1);
+class _ExpensesScreenState extends State<ExpensesScreen> {
+  static final DateTime _startMonth = DateTime(2026, 1, 1);
 
-  final Map<String, TextEditingController> _simpleControllers = {};
+  final Map<String, TextEditingController> _fixedValueControllers = {};
   late DateTime _selectedMonth;
-  late PageController _monthController;
-  late int _currentIndex;
+  late PageController _monthPagerController;
+  late int _currentMonthIndex;
 
   @override
-  // Inicializa stores e o controle de meses.
+  // Inicializa stores e prepara a navegacao entre meses.
   void initState() {
     super.initState();
-    if (!widget.store.isLoaded) {
-      widget.store.load();
+    if (!widget.expensesStore.isLoaded) {
+      widget.expensesStore.load();
     }
-    if (!widget.categoriesStore.isLoaded) {
-      widget.categoriesStore.load();
+    if (!widget.entryCategoriesStore.isLoaded) {
+      widget.entryCategoriesStore.load();
     }
-    _selectedMonth = _initialMonth();
-    _currentIndex = _monthsBetween(_startDate, _selectedMonth);
-    _monthController = PageController(initialPage: _currentIndex);
+    _selectedMonth = _resolveInitialMonth();
+    _currentMonthIndex = _monthsBetween(_startMonth, _selectedMonth);
+    _monthPagerController = PageController(initialPage: _currentMonthIndex);
   }
 
   @override
-  // Libera controllers usados na tela.
+  // Libera recursos locais usados na tela.
   void dispose() {
-    for (final controller in _simpleControllers.values) {
+    for (final controller in _fixedValueControllers.values) {
       controller.dispose();
     }
-    _monthController.dispose();
+    _monthPagerController.dispose();
     super.dispose();
   }
 
   @override
-  // Monta a UI com categorias, itens de gasto e totalizadores.
+  // Monta a tela principal de despesas.
   Widget build(BuildContext context) {
     final settings = AppSettingsScope.of(context);
     final monthFormatter = settings.monthYearFormatter();
@@ -76,222 +76,226 @@ class _DespesasScreenState extends State<DespesasScreen> {
         title: const Text('Despesas'),
         actions: [
           IconButton(
-            onPressed: _openCategories,
+            onPressed: _openEntryCategories,
             icon: const Icon(Icons.category),
             tooltip: 'Categorias',
           ),
         ],
       ),
       body: AnimatedBuilder(
-        animation: widget.store,
+        animation: widget.expensesStore,
         builder: (context, _) {
-          if (!widget.store.isLoaded) {
+          if (!widget.expensesStore.isLoaded) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final totalMes = widget.store.totalForMonth(_selectedMonth);
-          final groupCount = widget.store.groups.length;
-          final columnCount = widget.store.groups.fold<int>(
-            0,
-            (sum, group) => sum + group.columns.length,
-          );
-
-          return Padding(
-            padding: const EdgeInsets.all(AppLayout.spaceLg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _MonthSelector(
-                  controller: _monthController,
-                  formatter: monthFormatter,
-                  onPrevious: _canGoPrevious() ? _previousMonth : null,
-                  onNext: _nextMonth,
-                  onChanged: (index) {
-                    setState(() {
-                      _setSelectedMonth(index);
-                    });
-                  },
-                ),
-                const SizedBox(height: AppLayout.spaceMd),
-                _SummaryCard(
-                  totalLabel: moneyFormatter.format(totalMes),
-                  groupCount: groupCount,
-                  columnCount: columnCount,
-                ),
-                _ActionIcons(
-                  onAddCategory: _addGroup,
-                  onAddSubcategory: _addColumn,
-                  canAddSubcategory: widget.store.groups.isNotEmpty,
-                ),
-                const SizedBox(height: AppLayout.spaceSm),
-                Expanded(
-                  child: widget.store.groups.isEmpty
-                      ? _EmptyState(onAddGroup: _addGroup)
-                      : ReorderableListView.builder(
-                          padding: EdgeInsets.zero,
-                          primary: false,
-                          buildDefaultDragHandles: false,
-                          // Mantem o item arrastado sem fundo escuro, com sombra sutil.
-                          proxyDecorator: (child, index, animation) {
-                            return Builder(
-                              builder: (context) {
-                                final tokens = AppThemeTokens.of(context);
-                                return Material(
-                                  color: Colors.transparent,
-                                  elevation: 4,
-                                  shadowColor: tokens.shadow,
-                                  borderRadius: BorderRadius.circular(
-                                    AppLayout.radiusLg,
-                                  ),
-                                  child: child,
-                                );
-                              },
-                            );
-                          },
-                          itemCount: widget.store.groups.length,
-                          onReorder: widget.store.reorderGroups,
-                          itemBuilder: (context, index) {
-                            final group = widget.store.groups[index];
-                            final groupTotal = widget.store.totalForGroup(
-                              _selectedMonth,
-                              group,
-                            );
-
-                            return Padding(
-                              key: ValueKey(group.id),
-                              padding: const EdgeInsets.only(
-                                bottom: AppLayout.spaceMd,
-                              ),
-                              child: _GroupCard(
-                                group: group,
-                                totalLabel: moneyFormatter.format(groupTotal),
-                                onEditGroup: () => _editGroup(group),
-                                onRemoveGroup: () => _removeGroup(group),
-                                onAddColumn: () => _addColumnForGroup(group),
-                                onEditColumn: (column) =>
-                                    _editColumn(group, column),
-                                onRemoveColumn: (column) =>
-                                    _removeColumn(group, column),
-                                onReorderColumns: (oldIndex, newIndex) =>
-                                    widget.store.reorderColumns(
-                                      group,
-                                      oldIndex,
-                                      newIndex,
-                                    ),
-                                isFixedPositive: (column) =>
-                                    widget.store.valueForColumn(
-                                      _selectedMonth,
-                                      column,
-                                    ) >
-                                    0,
-                                onToggleFixed: (column) => _setSimpleValueSign(
-                                  _selectedMonth,
-                                  column,
-                                  !(widget.store.valueForColumn(
-                                        _selectedMonth,
-                                        column,
-                                      ) >
-                                      0),
-                                  _simpleControllerFor(
-                                    _selectedMonth,
-                                    column,
-                                    moneyFormatter,
-                                  ),
-                                ),
-                                dragHandle: ReorderableDragStartListener(
-                                  index: index,
-                                  child: const Icon(Icons.drag_indicator),
-                                ),
-                                buildCell: (column, columnIndex) {
-                                  if (!column.requiresEntries) {
-                                  return _ColumnValueTile(
-                                    title: column.title,
-                                    controller: _simpleControllerFor(
-                                      _selectedMonth,
-                                      column,
-                                      moneyFormatter,
-                                    ),
-                                    isPositive:
-                                        widget.store.valueForColumn(
-                                          _selectedMonth,
-                                          column,
-                                        ) >
-                                        0,
-                                    onChanged: (value) =>
-                                        _updateSimpleValueCurrent(
-                                          _selectedMonth,
-                                          column,
-                                          value,
-                                          widget.store
-                                                  .valueForColumn(
-                                                    _selectedMonth,
-                                                    column,
-                                                  ) >
-                                              0,
-                                        ),
-                                    onApply: (value) =>
-                                        _applyFixedValueFromMonth(
-                                          _selectedMonth,
-                                          column,
-                                          value,
-                                          widget.store
-                                                  .valueForColumn(
-                                                    _selectedMonth,
-                                                    column,
-                                                  ) >
-                                              0,
-                                        ),
-                                    onSignChanged: (isPositive) =>
-                                        _setSimpleValueSign(
-                                          _selectedMonth,
-                                          column,
-                                          isPositive,
-                                          _simpleControllerFor(
-                                            _selectedMonth,
-                                            column,
-                                            moneyFormatter,
-                                          ),
-                                        ),
-                                  );
-                                }
-
-                                  final total = widget.store.totalForColumn(
-                                    _selectedMonth,
-                                    column,
-                                  );
-                                  final count = widget.store.countForColumn(
-                                    _selectedMonth,
-                                    column,
-                                  );
-                                  return _ColumnSummaryTile(
-                                    title: column.title,
-                                    totalLabel: moneyFormatter.format(total),
-                                    countLabel: '$count itens',
-                                    onTap: () =>
-                                        _openColumnEntries(group, column),
-                                  );
-                                },
-                              ),
-                            );
-                          },
-                        ),
-                ),
-                const SizedBox(height: AppLayout.spaceMd),
-                _TotalFooter(label: moneyFormatter.format(totalMes)),
-              ],
-            ),
+          return _buildLoadedContent(
+            monthFormatter: monthFormatter,
+            moneyFormatter: moneyFormatter,
           );
         },
       ),
     );
   }
 
-  // Define o mes inicial exibido.
-  DateTime _initialMonth() {
+  // Monta o conteudo quando os dados ja estao carregados.
+  Widget _buildLoadedContent({
+    required DateFormat monthFormatter,
+    required NumberFormat moneyFormatter,
+  }) {
+    final summary = _buildMonthSummary();
+    final categories = widget.expensesStore.categories;
+
+    return Padding(
+      padding: const EdgeInsets.all(AppLayout.spaceLg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _MonthSelector(
+            controller: _monthPagerController,
+            formatter: monthFormatter,
+            startMonth: _startMonth,
+            onPrevious: _canGoPrevious() ? _previousMonth : null,
+            onNext: _nextMonth,
+            onChanged: (index) {
+              setState(() {
+                _setSelectedMonth(index);
+              });
+            },
+          ),
+          const SizedBox(height: AppLayout.spaceMd),
+          _SummaryCard(
+            totalLabel: moneyFormatter.format(summary.monthTotal),
+            categoryCount: summary.categoryCount,
+            subcategoryCount: summary.subcategoryCount,
+          ),
+          _ActionIcons(
+            onAddCategory: _addCategory,
+            onAddSubcategory: _addSubcategory,
+            canAddSubcategory: categories.isNotEmpty,
+          ),
+          const SizedBox(height: AppLayout.spaceSm),
+          Expanded(
+            child: categories.isEmpty
+                ? _EmptyState(onAddCategory: _addCategory)
+                : _buildCategoryList(
+                    categories: categories,
+                    moneyFormatter: moneyFormatter,
+                  ),
+          ),
+          const SizedBox(height: AppLayout.spaceMd),
+          _TotalFooter(label: moneyFormatter.format(summary.monthTotal)),
+        ],
+      ),
+    );
+  }
+
+  // Consolida totais e contagens do mes para simplificar o layout.
+  _MonthSummary _buildMonthSummary() {
+    final categories = widget.expensesStore.categories;
+    final subcategoryCount = categories.fold<int>(
+      0,
+      (sum, category) => sum + category.subcategories.length,
+    );
+    return _MonthSummary(
+      monthTotal: widget.expensesStore.totalForMonth(_selectedMonth),
+      categoryCount: categories.length,
+      subcategoryCount: subcategoryCount,
+    );
+  }
+
+  // Monta a lista reordenavel de categorias.
+  Widget _buildCategoryList({
+    required List<ExpenseCategory> categories,
+    required NumberFormat moneyFormatter,
+  }) {
+    return ReorderableListView.builder(
+      padding: EdgeInsets.zero,
+      primary: false,
+      buildDefaultDragHandles: false,
+      // Mantem o item arrastado sem fundo escuro, com sombra sutil.
+      proxyDecorator: (child, index, animation) {
+        return _buildDragProxy(child);
+      },
+      itemCount: categories.length,
+      onReorder: widget.expensesStore.reorderCategories,
+      itemBuilder: (context, index) {
+        final category = categories[index];
+        final total = widget.expensesStore.totalForCategory(
+          _selectedMonth,
+          category,
+        );
+
+        return Padding(
+          key: ValueKey(category.id),
+          padding: const EdgeInsets.only(bottom: AppLayout.spaceMd),
+          child: _CategoryCard(
+            category: category,
+            totalLabel: moneyFormatter.format(total),
+            onEditCategory: () => _editCategory(category),
+            onRemoveCategory: () => _removeCategory(category),
+            onAddSubcategory: () => _addSubcategoryForCategory(category),
+            onEditSubcategory: (subcategory) =>
+                _editSubcategory(category, subcategory),
+            onRemoveSubcategory: (subcategory) =>
+                _removeSubcategory(category, subcategory),
+            onReorderSubcategories: (oldIndex, newIndex) =>
+                widget.expensesStore.reorderSubcategories(
+                  category,
+                  oldIndex,
+                  newIndex,
+                ),
+            dragHandle: ReorderableDragStartListener(
+              index: index,
+              child: const Icon(Icons.drag_indicator),
+            ),
+            buildTile: (subcategory) => _buildSubcategoryTile(
+              category: category,
+              subcategory: subcategory,
+              moneyFormatter: moneyFormatter,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Desenha o proxy visual do item arrastado.
+  Widget _buildDragProxy(Widget child) {
+    final tokens = AppThemeTokens.of(context);
+    return Material(
+      color: Colors.transparent,
+      elevation: 4,
+      shadowColor: tokens.shadow,
+      borderRadius: BorderRadius.circular(AppLayout.radiusLg),
+      child: child,
+    );
+  }
+
+  // Monta o tile conforme o tipo de subcategoria.
+  Widget _buildSubcategoryTile({
+    required ExpenseCategory category,
+    required ExpenseSubcategory subcategory,
+    required NumberFormat moneyFormatter,
+  }) {
+    if (!subcategory.requiresEntries) {
+      final controller = _fixedValueControllerFor(
+        _selectedMonth,
+        subcategory,
+        moneyFormatter,
+      );
+      final currentValue = widget.expensesStore.valueForSubcategory(
+        _selectedMonth,
+        subcategory,
+      );
+      final isPositive = currentValue > 0;
+      return _SubcategoryFixedValueTile(
+        title: subcategory.title,
+        controller: controller,
+        isPositive: isPositive,
+        onChanged: (value) => _updateFixedValueForMonth(
+          _selectedMonth,
+          subcategory,
+          value,
+          isPositive,
+        ),
+        onApply: (value) => _applyFixedValueFromMonth(
+          _selectedMonth,
+          subcategory,
+          value,
+          isPositive,
+        ),
+        onSignChanged: (nextSign) => _updateFixedValueSign(
+          _selectedMonth,
+          subcategory,
+          nextSign,
+          controller,
+        ),
+      );
+    }
+
+    final total = widget.expensesStore.totalForSubcategory(
+      _selectedMonth,
+      subcategory,
+    );
+    final count = widget.expensesStore.countForSubcategory(
+      _selectedMonth,
+      subcategory,
+    );
+    return _SubcategorySummaryTile(
+      title: subcategory.title,
+      totalLabel: moneyFormatter.format(total),
+      countLabel: '$count itens',
+      onTap: () => _openSubcategoryEntries(category, subcategory),
+    );
+  }
+
+  // Define o mes inicial exibido respeitando o inicio do app.
+  DateTime _resolveInitialMonth() {
     final now = DateTime.now();
     final normalized = DateTime(now.year, now.month, 1);
-    if (normalized.isBefore(_startDate)) {
-      return _startDate;
+    if (normalized.isBefore(_startMonth)) {
+      return _startMonth;
     }
     return normalized;
   }
@@ -303,80 +307,85 @@ class _DespesasScreenState extends State<DespesasScreen> {
 
   // Converte indice em data do mes.
   DateTime _monthFromIndex(int index) {
-    return DateTime(_startDate.year, _startDate.month + index, 1);
+    return DateTime(_startMonth.year, _startMonth.month + index, 1);
   }
 
   // Indica se e possivel voltar um mes.
-  bool _canGoPrevious() => _currentIndex > 0;
+  bool _canGoPrevious() => _currentMonthIndex > 0;
 
-  // Navega para o mes anterior.
+  // Navega para o mes anterior com animacao.
   void _previousMonth() {
     if (!_canGoPrevious()) return;
-    _monthController.previousPage(
+    _monthPagerController.previousPage(
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOut,
     );
   }
 
-  // Navega para o proximo mes.
+  // Navega para o proximo mes com animacao.
   void _nextMonth() {
-    _monthController.nextPage(
+    _monthPagerController.nextPage(
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOut,
     );
   }
 
-  // Atualiza o mes selecionado e reseta inputs.
+  // Atualiza o mes selecionado e reseta inputs locais.
   void _setSelectedMonth(int index) {
-    _currentIndex = index;
+    _currentMonthIndex = index;
     _selectedMonth = _monthFromIndex(index);
-    _resetSimpleControllers();
+    _resetFixedValueControllers();
   }
 
-  // Reseta os controllers de valores fixos.
-  void _resetSimpleControllers() {
-    for (final controller in _simpleControllers.values) {
+  // Reseta os controllers de valores fixos do mes atual.
+  void _resetFixedValueControllers() {
+    for (final controller in _fixedValueControllers.values) {
       controller.dispose();
     }
-    _simpleControllers.clear();
+    _fixedValueControllers.clear();
   }
 
   // Abre a tela de lancamentos da subcategoria.
-  void _openColumnEntries(ExpenseGroup group, ExpenseColumn column) {
+  void _openSubcategoryEntries(
+    ExpenseCategory category,
+    ExpenseSubcategory subcategory,
+  ) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => DespesaColunaScreen(
-          store: widget.store,
-          categoriesStore: widget.categoriesStore,
-          group: group,
-          column: column,
+        builder: (context) => ExpenseSubcategoryEntriesScreen(
+          expensesStore: widget.expensesStore,
+          entryCategoriesStore: widget.entryCategoriesStore,
+          category: category,
+          subcategory: subcategory,
           initialMonth: _selectedMonth,
         ),
       ),
     );
   }
 
-  // Abre a tela de categorias.
-  void _openCategories() {
+  // Abre a tela de categorias globais de lancamentos.
+  void _openEntryCategories() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CategoriasScreen(store: widget.categoriesStore),
+        builder: (context) =>
+            CategoriesScreen(store: widget.entryCategoriesStore),
       ),
     );
   }
 
   // Retorna controller para subcategoria fixa por mes.
-  TextEditingController _simpleControllerFor(
+  TextEditingController _fixedValueControllerFor(
     DateTime month,
-    ExpenseColumn column,
+    ExpenseSubcategory subcategory,
     NumberFormat formatter,
   ) {
-    final key = '${monthKey(month)}|${column.id}';
-    return _simpleControllers.putIfAbsent(key, () {
+    final key = '${monthKey(month)}|${subcategory.id}';
+    return _fixedValueControllers.putIfAbsent(key, () {
       final controller = TextEditingController();
-      final value = widget.store.valueForColumn(month, column);
+      final value =
+          widget.expensesStore.valueForSubcategory(month, subcategory);
       if (value != 0) {
         controller.text = formatter.format(value.abs());
       }
@@ -384,23 +393,33 @@ class _DespesasScreenState extends State<DespesasScreen> {
     });
   }
 
-  // Aplica valor fixo a partir de um mes.
+  // Aplica o sinal correto a um valor numerico.
+  double _signedAmount(double value, bool isPositive) {
+    return isPositive ? value.abs() : -value.abs();
+  }
+
+  // Aplica valor fixo a partir do mes selecionado.
   void _applyFixedValueFromMonth(
     DateTime month,
-    ExpenseColumn column,
+    ExpenseSubcategory subcategory,
     String value,
     bool isPositive,
   ) {
     final parsed = parseCurrencyToDouble(value);
-    final signed = isPositive ? parsed.abs() : -parsed.abs();
+    final signed = _signedAmount(parsed, isPositive);
     final settings = AppSettingsScope.of(context);
     final formatter = settings.currencyFormatter();
     final end = DateTime(2030, 12, 1);
-    widget.store.setFixedValueFromMonth(month, end, column, signed);
+    widget.expensesStore.setFixedValueFromMonth(
+      month,
+      end,
+      subcategory,
+      signed,
+    );
 
-    _simpleControllers.forEach((key, controller) {
+    _fixedValueControllers.forEach((key, controller) {
       final parts = key.split('|');
-      if (parts.length != 2 || parts[1] != column.id) {
+      if (parts.length != 2 || parts[1] != subcategory.id) {
         return;
       }
       final parsedMonth = parseMonthKey(parts[0]);
@@ -411,65 +430,66 @@ class _DespesasScreenState extends State<DespesasScreen> {
     });
   }
 
-  // Atualiza valor simples da subcategoria no mes.
-  void _updateSimpleValueCurrent(
+  // Atualiza o valor fixo da subcategoria no mes atual.
+  void _updateFixedValueForMonth(
     DateTime month,
-    ExpenseColumn column,
+    ExpenseSubcategory subcategory,
     String value,
     bool isPositive,
   ) {
     final parsed = parseCurrencyToDouble(value);
-    final signed = isPositive ? parsed.abs() : -parsed.abs();
-    widget.store.setValueForColumn(month, column, signed);
+    final signed = _signedAmount(parsed, isPositive);
+    widget.expensesStore.setValueForSubcategory(month, subcategory, signed);
   }
 
-  void _setSimpleValueSign(
+  // Atualiza o sinal do valor fixo e sincroniza o controller.
+  void _updateFixedValueSign(
     DateTime month,
-    ExpenseColumn column,
+    ExpenseSubcategory subcategory,
     bool isPositive,
     TextEditingController controller,
   ) {
     final parsed = parseCurrencyToDouble(controller.text);
-    final signed = isPositive ? parsed.abs() : -parsed.abs();
-    widget.store.setValueForColumn(month, column, signed);
+    final signed = _signedAmount(parsed, isPositive);
+    widget.expensesStore.setValueForSubcategory(month, subcategory, signed);
     final settings = AppSettingsScope.of(context);
     final formatter = settings.currencyFormatter();
     controller.text = signed == 0 ? '' : formatter.format(signed.abs());
   }
 
   // Cria uma nova categoria de despesas.
-  Future<void> _addGroup() async {
+  Future<void> _addCategory() async {
     final title = await _promptForText(
       title: 'Nova categoria',
       label: 'Nome da categoria',
     );
     if (title == null || title.trim().isEmpty) return;
-    widget.store.addGroup(title.trim());
+    widget.expensesStore.addCategory(title.trim());
     _showSnack('Categoria criada');
   }
 
   // Edita o nome da categoria.
-  Future<void> _editGroup(ExpenseGroup group) async {
+  Future<void> _editCategory(ExpenseCategory category) async {
     final title = await _promptForText(
       title: 'Editar categoria',
       label: 'Nome da categoria',
-      initialValue: group.title,
+      initialValue: category.title,
     );
     if (title == null || title.trim().isEmpty) return;
-    widget.store.updateGroup(group, title.trim());
+    widget.expensesStore.updateCategory(category, title.trim());
   }
 
   // Remove uma categoria e seus itens de gasto.
-  void _removeGroup(ExpenseGroup group) {
-    widget.store.removeGroup(group);
+  void _removeCategory(ExpenseCategory category) {
+    widget.expensesStore.removeCategory(category);
   }
 
-  // Cria uma nova subcategoria em uma categoria.
-  Future<void> _addColumn() async {
-    final result = await _promptForColumn();
+  // Cria uma nova subcategoria em qualquer categoria.
+  Future<void> _addSubcategory() async {
+    final result = await _promptForSubcategory();
     if (result == null) return;
-    widget.store.addColumn(
-      result.group,
+    widget.expensesStore.addSubcategory(
+      result.category,
       result.title,
       requiresEntries: result.requiresEntries,
     );
@@ -477,11 +497,11 @@ class _DespesasScreenState extends State<DespesasScreen> {
   }
 
   // Cria uma nova subcategoria para uma categoria especifica.
-  Future<void> _addColumnForGroup(ExpenseGroup group) async {
-    final result = await _promptForColumn(group: group);
+  Future<void> _addSubcategoryForCategory(ExpenseCategory category) async {
+    final result = await _promptForSubcategory(category: category);
     if (result == null) return;
-    widget.store.addColumn(
-      group,
+    widget.expensesStore.addSubcategory(
+      category,
       result.title,
       requiresEntries: result.requiresEntries,
     );
@@ -489,25 +509,31 @@ class _DespesasScreenState extends State<DespesasScreen> {
   }
 
   // Edita o titulo da subcategoria.
-  Future<void> _editColumn(ExpenseGroup group, ExpenseColumn column) async {
+  Future<void> _editSubcategory(
+    ExpenseCategory category,
+    ExpenseSubcategory subcategory,
+  ) async {
     final title = await _promptForText(
       title: 'Editar subcategoria',
       label: 'Nome da subcategoria',
-      initialValue: column.title,
+      initialValue: subcategory.title,
     );
     if (title == null || title.trim().isEmpty) return;
-    widget.store.updateColumn(group, column, title.trim());
+    widget.expensesStore.updateSubcategory(category, subcategory, title.trim());
   }
 
   // Remove uma subcategoria de uma categoria.
-  Future<void> _removeColumn(ExpenseGroup group, ExpenseColumn column) async {
+  Future<void> _removeSubcategory(
+    ExpenseCategory category,
+    ExpenseSubcategory subcategory,
+  ) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: const Text('Remover subcategoria'),
           content: Text(
-            'Remover "${column.title}" e todos os lancamentos associados?',
+            'Remover "${subcategory.title}" e todos os lancamentos associados?',
           ),
           actions: [
             TextButton(
@@ -523,7 +549,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
       },
     );
     if (confirm != true) return;
-    widget.store.removeColumn(group, column);
+    widget.expensesStore.removeSubcategory(category, subcategory);
   }
 
   // Exibe um dialogo simples de texto.
@@ -562,42 +588,48 @@ class _DespesasScreenState extends State<DespesasScreen> {
   }
 
   // Exibe dialogo para criar subcategoria.
-  Future<_ColumnInput?> _promptForColumn({ExpenseGroup? group}) async {
+  Future<_SubcategoryInput?> _promptForSubcategory({
+    ExpenseCategory? category,
+  }) async {
+    final availableCategories = widget.expensesStore.categories;
+    if (availableCategories.isEmpty) {
+      return null;
+    }
     final controller = TextEditingController();
-    ExpenseGroup selectedGroup = group ?? widget.store.groups.first;
+    ExpenseCategory selectedCategory = category ?? availableCategories.first;
     bool requiresEntries = false;
 
-    return showDialog<_ColumnInput>(
+    return showDialog<_SubcategoryInput>(
       context: context,
       builder: (context) {
         return StatefulBuilder(
-          builder: (context, setState) {            
+          builder: (context, setState) {
             return AlertDialog(
               title: const Text('Nova subcategoria'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  DropdownButtonFormField<ExpenseGroup>(
-                      initialValue: selectedGroup,
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.folder_open),
-                        contentPadding: EdgeInsets.symmetric(
-                          vertical: AppLayout.spaceSm,
-                        ),
+                  DropdownButtonFormField<ExpenseCategory>(
+                    initialValue: selectedCategory,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.folder_open),
+                      contentPadding: EdgeInsets.symmetric(
+                        vertical: AppLayout.spaceSm,
                       ),
-                      items: widget.store.groups
-                          .map(
-                            (group) => DropdownMenuItem(
-                              value: group,
-                              child: Text(group.title),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() => selectedGroup = value);
-                      },
                     ),
+                    items: availableCategories
+                        .map(
+                          (category) => DropdownMenuItem(
+                            value: category,
+                            child: Text(category.title),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => selectedCategory = value);
+                    },
+                  ),
                   const SizedBox(height: AppLayout.spaceSm),
                   TextField(
                     controller: controller,
@@ -615,7 +647,7 @@ class _DespesasScreenState extends State<DespesasScreen> {
                   const SizedBox(height: AppLayout.spaceSm),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Registrar lançamentos detalhados'),
+                    title: const Text('Registrar lancamentos detalhados'),
                     subtitle: const Text(
                       'Usar data, categoria, motivo e valor',
                     ),
@@ -637,8 +669,8 @@ class _DespesasScreenState extends State<DespesasScreen> {
                     if (title.isEmpty) return;
                     Navigator.pop(
                       context,
-                      _ColumnInput(
-                        selectedGroup,
+                      _SubcategoryInput(
+                        selectedCategory,
                         title,
                         requiresEntries: requiresEntries,
                       ),
@@ -668,11 +700,24 @@ class _DespesasScreenState extends State<DespesasScreen> {
   }
 }
 
-// Modelo interno para criar itens de gasto.
-class _ColumnInput {
-  _ColumnInput(this.group, this.title, {required this.requiresEntries});
+// Modelo interno para agrupar dados de resumo do mes.
+class _MonthSummary {
+  final double monthTotal;
+  final int categoryCount;
+  final int subcategoryCount;
 
-  final ExpenseGroup group;
+  const _MonthSummary({
+    required this.monthTotal,
+    required this.categoryCount,
+    required this.subcategoryCount,
+  });
+}
+
+// Modelo interno para cadastrar uma nova subcategoria.
+class _SubcategoryInput {
+  _SubcategoryInput(this.category, this.title, {required this.requiresEntries});
+
+  final ExpenseCategory category;
   final String title;
   final bool requiresEntries;
 }
@@ -681,6 +726,7 @@ class _ColumnInput {
 class _MonthSelector extends StatelessWidget {
   final PageController controller;
   final DateFormat formatter;
+  final DateTime startMonth;
   final void Function(int index) onChanged;
   final VoidCallback? onPrevious;
   final VoidCallback onNext;
@@ -688,6 +734,7 @@ class _MonthSelector extends StatelessWidget {
   const _MonthSelector({
     required this.controller,
     required this.formatter,
+    required this.startMonth,
     required this.onChanged,
     this.onPrevious,
     required this.onNext,
@@ -726,7 +773,11 @@ class _MonthSelector extends StatelessWidget {
                 controller: controller,
                 onPageChanged: onChanged,
                 itemBuilder: (context, index) {
-                  final month = DateTime(2026, 1 + index, 1);
+                  final month = DateTime(
+                    startMonth.year,
+                    startMonth.month + index,
+                    1,
+                  );
                   return Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
@@ -761,9 +812,9 @@ class _MonthSelector extends StatelessWidget {
 
 // Estado vazio quando nao ha categorias.
 class _EmptyState extends StatelessWidget {
-  final VoidCallback onAddGroup;
+  final VoidCallback onAddCategory;
 
-  const _EmptyState({required this.onAddGroup});
+  const _EmptyState({required this.onAddCategory});
 
   @override
   // Monta o estado vazio com CTA.
@@ -789,7 +840,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: AppLayout.spaceSm),
             TextButton.icon(
-              onPressed: onAddGroup,
+              onPressed: onAddCategory,
               icon: const Icon(Icons.add),
               label: const Text('Criar categoria'),
             ),
@@ -803,13 +854,13 @@ class _EmptyState extends StatelessWidget {
 // Card com resumo do mes e contadores.
 class _SummaryCard extends StatelessWidget {
   final String totalLabel;
-  final int groupCount;
-  final int columnCount;
+  final int categoryCount;
+  final int subcategoryCount;
 
   const _SummaryCard({
     required this.totalLabel,
-    required this.groupCount,
-    required this.columnCount,
+    required this.categoryCount,
+    required this.subcategoryCount,
   });
 
   @override
@@ -861,8 +912,8 @@ class _SummaryCard extends StatelessWidget {
             spacing: AppLayout.spaceSm,
             runSpacing: AppLayout.spaceXs,
             children: [
-              AuroraBadge(label: '$groupCount categorias'),
-              AuroraBadge(label: '$columnCount itens'),
+              AuroraBadge(label: '$categoryCount categorias'),
+              AuroraBadge(label: '$subcategoryCount itens'),
             ],
           ),
         ],
@@ -872,7 +923,7 @@ class _SummaryCard extends StatelessWidget {
 }
 
 // Acoes disponiveis no card da categoria.
-enum _GroupAction { addColumn, editGroup, removeGroup }
+enum _CategoryAction { addSubcategory, editCategory, removeCategory }
 
 // Acoes de adicionar categoria/subcategoria em icones soltos.
 class _ActionIcons extends StatelessWidget {
@@ -922,33 +973,29 @@ class _ActionIcons extends StatelessWidget {
 }
 
 // Card de categoria com itens de gasto e acoes.
-class _GroupCard extends StatelessWidget {
-  final ExpenseGroup group;
+class _CategoryCard extends StatelessWidget {
+  final ExpenseCategory category;
   final String totalLabel;
-  final VoidCallback onEditGroup;
-  final VoidCallback onRemoveGroup;
-  final VoidCallback onAddColumn;
-  final void Function(ExpenseColumn column) onEditColumn;
-  final void Function(ExpenseColumn column) onRemoveColumn;
-  final void Function(int oldIndex, int newIndex) onReorderColumns;
-  final bool Function(ExpenseColumn column) isFixedPositive;
-  final void Function(ExpenseColumn column) onToggleFixed;
+  final VoidCallback onEditCategory;
+  final VoidCallback onRemoveCategory;
+  final VoidCallback onAddSubcategory;
+  final void Function(ExpenseSubcategory subcategory) onEditSubcategory;
+  final void Function(ExpenseSubcategory subcategory) onRemoveSubcategory;
+  final void Function(int oldIndex, int newIndex) onReorderSubcategories;
   final Widget dragHandle;
-  final Widget Function(ExpenseColumn column, int index) buildCell;
+  final Widget Function(ExpenseSubcategory subcategory) buildTile;
 
-  const _GroupCard({
-    required this.group,
+  const _CategoryCard({
+    required this.category,
     required this.totalLabel,
-    required this.onEditGroup,
-    required this.onRemoveGroup,
-    required this.onAddColumn,
-    required this.onEditColumn,
-    required this.onRemoveColumn,
-    required this.onReorderColumns,
-    required this.isFixedPositive,
-    required this.onToggleFixed,
+    required this.onEditCategory,
+    required this.onRemoveCategory,
+    required this.onAddSubcategory,
+    required this.onEditSubcategory,
+    required this.onRemoveSubcategory,
+    required this.onReorderSubcategories,
     required this.dragHandle,
-    required this.buildCell,
+    required this.buildTile,
   });
 
   @override
@@ -987,7 +1034,7 @@ class _GroupCard extends StatelessWidget {
                         const SizedBox(width: AppLayout.spaceSm),
                         Expanded(
                           child: Text(
-                            group.title,
+                            category.title,
                             style: TextStyle(
                               color: tokens.textPrimary,
                               fontWeight: FontWeight.w600,
@@ -1004,17 +1051,17 @@ class _GroupCard extends StatelessWidget {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        PopupMenuButton<_GroupAction>(
+                        PopupMenuButton<_CategoryAction>(
                           onSelected: (action) {
                             switch (action) {
-                              case _GroupAction.addColumn:
-                                onAddColumn();
+                              case _CategoryAction.addSubcategory:
+                                onAddSubcategory();
                                 break;
-                              case _GroupAction.editGroup:
-                                onEditGroup();
+                              case _CategoryAction.editCategory:
+                                onEditCategory();
                                 break;
-                              case _GroupAction.removeGroup:
-                                onRemoveGroup();
+                              case _CategoryAction.removeCategory:
+                                onRemoveCategory();
                                 break;
                             }
                           },
@@ -1031,21 +1078,21 @@ class _GroupCard extends StatelessWidget {
                           ),
                           itemBuilder: (context) => [
                             PopupMenuItem(
-                              value: _GroupAction.addColumn,
+                              value: _CategoryAction.addSubcategory,
                               child: Text(
                                 'Adicionar subcategoria',
                                 style: TextStyle(color: tokens.textPrimary),
                               ),
                             ),
                             PopupMenuItem(
-                              value: _GroupAction.editGroup,
+                              value: _CategoryAction.editCategory,
                               child: Text(
                                 'Editar categoria',
                                 style: TextStyle(color: tokens.textPrimary),
                               ),
                             ),
                             PopupMenuItem(
-                              value: _GroupAction.removeGroup,
+                              value: _CategoryAction.removeCategory,
                               child: Text(
                                 'Remover categoria',
                                 style: TextStyle(color: tokens.textPrimary),
@@ -1066,7 +1113,7 @@ class _GroupCard extends StatelessWidget {
                   const SizedBox(width: AppLayout.spaceSm),
                   Expanded(
                     child: Text(
-                      group.title,
+                      category.title,
                       style: TextStyle(
                         color: tokens.textPrimary,
                         fontWeight: FontWeight.w600,
@@ -1084,7 +1131,7 @@ class _GroupCard extends StatelessWidget {
                   ),
                   const SizedBox(width: AppLayout.spaceSm),
                   IconButton(
-                    onPressed: onAddColumn,
+                    onPressed: onAddSubcategory,
                     icon: const Icon(Icons.add),
                     tooltip: 'Adicionar subcategoria',
                     color: tokens.textSecondary,
@@ -1096,7 +1143,7 @@ class _GroupCard extends StatelessWidget {
                     visualDensity: VisualDensity.compact,
                   ),
                   IconButton(
-                    onPressed: onEditGroup,
+                    onPressed: onEditCategory,
                     icon: const Icon(Icons.edit),
                     tooltip: 'Editar categoria',
                     color: tokens.textSecondary,
@@ -1108,7 +1155,7 @@ class _GroupCard extends StatelessWidget {
                     visualDensity: VisualDensity.compact,
                   ),
                   IconButton(
-                    onPressed: onRemoveGroup,
+                    onPressed: onRemoveCategory,
                     icon: const Icon(Icons.delete_outline),
                     tooltip: 'Remover categoria',
                     color: tokens.textSecondary,
@@ -1123,7 +1170,7 @@ class _GroupCard extends StatelessWidget {
               );
             },
           ),
-          if (group.columns.isEmpty)
+          if (category.subcategories.isEmpty)
             Text(
               'Sem itens de gasto. Clique em adicionar para incluir.',
               style: TextStyle(color: tokens.textSecondary),
@@ -1146,34 +1193,35 @@ class _GroupCard extends StatelessWidget {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     buildDefaultDragHandles: false,
-                    itemCount: group.columns.length,
-                    onReorder: onReorderColumns,
+                    itemCount: category.subcategories.length,
+                    onReorder: onReorderSubcategories,
                     itemBuilder: (context, index) {
-                      final column = group.columns[index];
+                      final subcategory = category.subcategories[index];
                       return Padding(
-                        key: ValueKey(column.id),
+                        key: ValueKey(subcategory.id),
                         padding: const EdgeInsets.only(
                           bottom: AppLayout.spaceXs,
                         ),
                         child: Stack(
                           children: [
-                            buildCell(column, index),
-                        Positioned(
-                          top: 4,
-                          right: 4,
-                          child: Row(
-                            children: [
-                              _TinyIconButton(
-                                icon: Icons.edit,
-                                onTap: () => onEditColumn(column),
+                            buildTile(subcategory),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: Row(
+                                children: [
+                                  _TinyIconButton(
+                                    icon: Icons.edit,
+                                    onTap: () => onEditSubcategory(subcategory),
+                                  ),
+                                  _TinyIconButton(
+                                    icon: Icons.close,
+                                    onTap: () =>
+                                        onRemoveSubcategory(subcategory),
+                                  ),
+                                ],
                               ),
-                              _TinyIconButton(
-                                icon: Icons.close,
-                                onTap: () => onRemoveColumn(column),
-                              ),
-                            ],
-                          ),
-                        ),
+                            ),
                           ],
                         ),
                       );
@@ -1187,7 +1235,7 @@ class _GroupCard extends StatelessWidget {
                   primary: false,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: group.columns.length,
+                  itemCount: category.subcategories.length,
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: crossAxisCount,
                     crossAxisSpacing: AppLayout.spaceXs,
@@ -1195,10 +1243,10 @@ class _GroupCard extends StatelessWidget {
                     childAspectRatio: 3.2,
                   ),
                   itemBuilder: (context, index) {
-                    final column = group.columns[index];
+                    final subcategory = category.subcategories[index];
                     return Stack(
                       children: [
-                        buildCell(column, index),
+                        buildTile(subcategory),
                         Positioned(
                           top: 4,
                           right: 4,
@@ -1206,11 +1254,11 @@ class _GroupCard extends StatelessWidget {
                             children: [
                               _TinyIconButton(
                                 icon: Icons.edit,
-                                onTap: () => onEditColumn(column),
+                                onTap: () => onEditSubcategory(subcategory),
                               ),
                               _TinyIconButton(
                                 icon: Icons.close,
-                                onTap: () => onRemoveColumn(column),
+                                onTap: () => onRemoveSubcategory(subcategory),
                               ),
                             ],
                           ),
@@ -1227,14 +1275,14 @@ class _GroupCard extends StatelessWidget {
   }
 }
 
-// Tile com resumo de item detalhado.
-class _ColumnSummaryTile extends StatelessWidget {
+// Tile com resumo da subcategoria detalhada.
+class _SubcategorySummaryTile extends StatelessWidget {
   final String title;
   final String totalLabel;
   final String countLabel;
   final VoidCallback onTap;
 
-  const _ColumnSummaryTile({
+  const _SubcategorySummaryTile({
     required this.title,
     required this.totalLabel,
     required this.countLabel,
@@ -1242,7 +1290,7 @@ class _ColumnSummaryTile extends StatelessWidget {
   });
 
   @override
-  // Monta o tile de resumo do item.
+  // Monta o tile de resumo da subcategoria.
   Widget build(BuildContext context) {
     final tokens = AppThemeTokens.of(context);
     return InkWell(
@@ -1306,8 +1354,8 @@ class _ColumnSummaryTile extends StatelessWidget {
   }
 }
 
-// Tile de item fixo editavel.
-class _ColumnValueTile extends StatelessWidget {
+// Tile de subcategoria fixa editavel.
+class _SubcategoryFixedValueTile extends StatelessWidget {
   final String title;
   final TextEditingController controller;
   final bool isPositive;
@@ -1315,7 +1363,7 @@ class _ColumnValueTile extends StatelessWidget {
   final ValueChanged<String> onApply;
   final ValueChanged<bool> onSignChanged;
 
-  const _ColumnValueTile({
+  const _SubcategoryFixedValueTile({
     required this.title,
     required this.controller,
     required this.isPositive,

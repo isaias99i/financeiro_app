@@ -15,8 +15,8 @@ import '../theme/app_layout.dart';
 class ResumoFinanceiroWidget extends StatefulWidget {
   final MenuStore menuStore;
   final ReceitasStore receitasStore;
-  final DespesasStore despesasStore;
-  final CategoriesStore categoriesStore;
+  final ExpensesStore expensesStore;
+  final CategoriesStore entryCategoriesStore;
   final double receitas;
   final double despesas;
   final double saldoMensal;
@@ -27,8 +27,8 @@ class ResumoFinanceiroWidget extends StatefulWidget {
   const ResumoFinanceiroWidget({
     required this.menuStore,
     required this.receitasStore,
-    required this.despesasStore,
-    required this.categoriesStore,
+    required this.expensesStore,
+    required this.entryCategoriesStore,
     required this.receitas,
     required this.despesas,
     required this.saldoMensal,
@@ -303,13 +303,13 @@ class _ResumoFinanceiroWidgetState extends State<ResumoFinanceiroWidget> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => DespesasScreen(
-                store: widget.despesasStore,
-                categoriesStore: widget.categoriesStore,
-              ),
-            ),
-          );
-        };
+                  builder: (context) => ExpensesScreen(
+                    expensesStore: widget.expensesStore,
+                    entryCategoriesStore: widget.entryCategoriesStore,
+                  ),
+                ),
+              );
+            };
       case MenuMetric.saldoMensal:
       case MenuMetric.saldoAposReserva:
       case MenuMetric.saldoAtual:

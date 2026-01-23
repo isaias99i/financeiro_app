@@ -32,7 +32,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   late final MenuStore _menuStore;
   late final ReceitasStore _receitasStore;
-  late final DespesasStore _despesasStore;
+  late final ExpensesStore _expensesStore;
   late final CarteiraStore _carteiraStore;
   late final CategoriesStore _categoriesStore;
   DashboardPeriod _period = DashboardPeriod.month;
@@ -44,11 +44,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     _menuStore = MenuStore();
     _receitasStore = ReceitasStore(userId: widget.userId);
-    _despesasStore = DespesasStore(userId: widget.userId);
+    _expensesStore = ExpensesStore(userId: widget.userId);
     _carteiraStore = CarteiraStore(userId: widget.userId);
     _categoriesStore = CategoriesStore(userId: widget.userId);
     _receitasStore.load();
-    _despesasStore.load();
+    _expensesStore.load();
     _carteiraStore.load();
     _categoriesStore.load();
   }
@@ -58,7 +58,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void dispose() {
     _menuStore.dispose();
     _receitasStore.dispose();
-    _despesasStore.dispose();
+    _expensesStore.dispose();
     _carteiraStore.dispose();
     _categoriesStore.dispose();
     super.dispose();
@@ -86,12 +86,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: AnimatedBuilder(
         animation: Listenable.merge([
           _receitasStore,
-          _despesasStore,
+          _expensesStore,
           _carteiraStore,
         ]),
         builder: (context, _) {
           if (!_receitasStore.isLoaded ||
-              !_despesasStore.isLoaded ||
+              !_expensesStore.isLoaded ||
               !_carteiraStore.isLoaded ||
               !_categoriesStore.isLoaded) {
             return const Center(child: CircularProgressIndicator());
@@ -101,7 +101,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final currentMonth = DateTime(now.year, now.month, 1);
 
           final receitasMes = _receitasStore.totalForMonth(currentMonth);
-          final despesasMes = _despesasStore.totalForMonth(currentMonth);
+          final despesasMes = _expensesStore.totalForMonth(currentMonth);
 
           final double saldoMensal = receitasMes + despesasMes;
           final double saldoAposReserva = saldoMensal - widget.reserva;
@@ -115,12 +115,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final double despesasPeriodo = _sumForPeriod(
             now,
             periodMonths,
-            _despesasStore.totalForMonth,
+            _expensesStore.totalForMonth,
           );
           final double saldoPeriodo = receitasPeriodo + despesasPeriodo;
           final double saldoMesAnterior =
               _receitasStore.totalForMonth(_monthOffset(now, 1)) +
-              _despesasStore.totalForMonth(_monthOffset(now, 1));
+              _expensesStore.totalForMonth(_monthOffset(now, 1));
           final _Variation variation = _buildVariation(
             saldoMensal,
             saldoMesAnterior,
@@ -151,8 +151,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ResumoFinanceiroWidget(
                     menuStore: _menuStore,
                     receitasStore: _receitasStore,
-                    despesasStore: _despesasStore,
-                    categoriesStore: _categoriesStore,
+                    expensesStore: _expensesStore,
+                    entryCategoriesStore: _categoriesStore,
                     receitas: receitasMes,
                     despesas: despesasMes,
                     saldoMensal: saldoMensal,
@@ -226,7 +226,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final values = <double>[];
     final labels = <DateTime>[];
     var lastSalary = _receitasStore.salaryForMonth(base);
-    var lastDespesas = _despesasStore.totalForMonth(base);
+    var lastDespesas = _expensesStore.totalForMonth(base);
     var runningTotal = 0.0;
     for (var i = 0; i < months; i++) {
       final month = DateTime(base.year, base.month + i, 1);
@@ -234,7 +234,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final extras = _receitasStore.extrasTotalForMonth(month);
       final hasSalary = _receitasStore.hasSalaryForMonth(month);
       final receitas = (hasSalary ? salary : lastSalary) + extras;
-      final despesas = _despesasStore.totalForMonth(month);
+      final despesas = _expensesStore.totalForMonth(month);
       final effectiveReceitas = receitas == 0 && despesas == 0
           ? lastSalary
           : receitas;
@@ -264,7 +264,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         builder: (context) => SettingsScreen(
           categoriesStore: _categoriesStore,
           receitasStore: _receitasStore,
-          despesasStore: _despesasStore,
+          expensesStore: _expensesStore,
           carteiraStore: _carteiraStore,
         ),
       ),
@@ -275,7 +275,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _refreshAll() async {
     await Future.wait([
       _receitasStore.load(),
-      _despesasStore.load(),
+      _expensesStore.load(),
       _carteiraStore.load(),
       _categoriesStore.load(),
     ]);

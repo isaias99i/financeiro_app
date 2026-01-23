@@ -20,7 +20,7 @@ import '../theme/app_tokens.dart';
 class SettingsScreen extends StatefulWidget {
   final CategoriesStore categoriesStore;
   final ReceitasStore receitasStore;
-  final DespesasStore despesasStore;
+  final ExpensesStore expensesStore;
   final CarteiraStore carteiraStore;
 
   // Tela principal de configuracoes do app.
@@ -28,7 +28,7 @@ class SettingsScreen extends StatefulWidget {
     super.key,
     required this.categoriesStore,
     required this.receitasStore,
-    required this.despesasStore,
+    required this.expensesStore,
     required this.carteiraStore,
   });
 
@@ -96,7 +96,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => CategoriasScreen(store: widget.categoriesStore),
+                builder: (context) =>
+                    CategoriesScreen(store: widget.categoriesStore),
               ),
             );
           },
@@ -204,9 +205,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => FaturaImportScreen(
-                  despesasStore: widget.despesasStore,
-                  categoriesStore: widget.categoriesStore,
+                builder: (context) => InvoiceImportScreen(
+                  expensesStore: widget.expensesStore,
+                  entryCategoriesStore: widget.categoriesStore,
                 ),
               ),
             );
@@ -303,7 +304,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final settingsStore = AppSettingsScope.of(context);
       await Future.wait([
         widget.receitasStore.load(),
-        widget.despesasStore.load(),
+        widget.expensesStore.load(),
         widget.carteiraStore.load(),
         widget.categoriesStore.load(),
         settingsStore.loadForUser(user.uid),

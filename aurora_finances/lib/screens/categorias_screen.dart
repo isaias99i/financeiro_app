@@ -4,21 +4,21 @@ import '../data/categories_store.dart';
 import '../widgets/aurora_scaffold.dart';
 import '../theme/app_tokens.dart';
 
-// Tela de gerenciamento de categorias.
-class CategoriasScreen extends StatefulWidget {
+// Tela de gerenciamento de categorias globais de lancamentos.
+class CategoriesScreen extends StatefulWidget {
   final CategoriesStore store;
 
-  const CategoriasScreen({super.key, required this.store});
+  const CategoriesScreen({super.key, required this.store});
 
   @override
   // Cria o estado da tela de categorias.
-  State<CategoriasScreen> createState() => _CategoriasScreenState();
+  State<CategoriesScreen> createState() => _CategoriesScreenState();
 }
 
-// Estado da tela de categorias.
-class _CategoriasScreenState extends State<CategoriasScreen> {
+// Estado da tela de categorias com carregamento inicial.
+class _CategoriesScreenState extends State<CategoriesScreen> {
   @override
-  // Carrega categorias ao iniciar.
+  // Garante que o store esteja carregado para exibir a lista.
   void initState() {
     super.initState();
     if (!widget.store.isLoaded) {
@@ -27,7 +27,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
   }
 
   @override
-  // Monta a lista de categorias.
+  // Monta a tela com lista e acoes de categoria.
   Widget build(BuildContext context) {
     return AuroraScaffold(
       appBar: AppBar(
