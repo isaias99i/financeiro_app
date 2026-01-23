@@ -2,6 +2,12 @@
 
 App Flutter para controle financeiro pessoal com autenticacao (Email/Senha, Google e Microsoft) e persistencia no Cloud Firestore por usuario.
 
+## Objetivos do app
+- Centralizar receitas, despesas e contas em um unico painel.
+- Facilitar o controle mensal com categorias, subcategorias e lancamentos.
+- Ajudar a visualizar saldo atual, saldo mensal e tendencia futura.
+- Permitir importar faturas de cartao com OCR para agilizar o cadastro.
+
 ## Funcionalidades principais
 - Login/registro por email e senha
 - Login social com Google e Microsoft
@@ -11,6 +17,31 @@ App Flutter para controle financeiro pessoal com autenticacao (Email/Senha, Goog
 - Importacao de fatura (PDF) com OCR e sugestao de lancamentos
 - Carteira/contas bancarias e categorias personalizadas
 - Preferencias de tema, moeda e formato de data por usuario
+
+## Resumo completo das funcionalidades
+- Autenticacao: email/senha, Google e Microsoft.
+- Dashboard: saldo atual, saldo mensal, variacao e previsao para meses futuros.
+- Receitas: salario e extras com total por mes.
+- Despesas: categorias e subcategorias com dois modos:
+  - Subcategoria fixa: valor mensal direto.
+  - Subcategoria detalhada: lista de lancamentos por data.
+- Lancamentos detalhados: categoria, motivo, valor, data e parcelas.
+- Parcelas: gera lancamentos futuros e mantem referencia da compra.
+- Importacao de fatura: OCR local + parser, suporte a PDF com senha.
+- Categorias globais: lista de categorias para lancamentos detalhados.
+- Carteira: contas e saldo consolidado.
+- Preferencias: tema, tipografia, moeda e formato de data.
+- Configuracoes: reset de dados do usuario e exclusao de conta.
+
+## Uso (fluxo sugerido)
+1) Crie sua conta e entre no app.
+2) Cadastre receitas e ajuste seu salario do mes.
+3) Crie categorias e subcategorias de despesas:
+   - Use subcategoria fixa para gastos recorrentes.
+   - Use subcategoria detalhada para gastos variaveis.
+4) Lance despesas do mes ou importe a fatura do cartao.
+5) Acompanhe o resumo no dashboard e a previsao futura.
+6) Ajuste categorias, cores e formatos nas configuracoes.
 
 ## Requisitos
 - Flutter SDK instalado
