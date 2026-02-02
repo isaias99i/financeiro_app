@@ -21,6 +21,12 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _isBusy = false;
   String? _error;
 
+  // Evita chamadas de setState quando o widget ja foi descartado.
+  void _safeSetState(VoidCallback fn) {
+    if (!mounted) return;
+    setState(fn);
+  }
+
   // Libera controladores de texto.
   @override
   void dispose() {
@@ -148,7 +154,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   // Alterna entre login e cadastro.
   void _toggleMode() {
-    setState(() {
+    _safeSetState(() {
       _isLogin = !_isLogin;
       _error = null;
     });
@@ -156,7 +162,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   // Autentica via email/senha.
   Future<void> _handleEmailPassword() async {
-    setState(() {
+    _safeSetState(() {
       _isBusy = true;
       _error = null;
     });
@@ -175,11 +181,11 @@ class _AuthScreenState extends State<AuthScreen> {
         );
       }
     } on FirebaseAuthException catch (e) {
-      setState(() {
+      _safeSetState(() {
         _error = e.message ?? 'Falha ao autenticar.';
       });
     } finally {
-      setState(() {
+      _safeSetState(() {
         _isBusy = false;
       });
     }
@@ -187,7 +193,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   // Autentica via Google.
   Future<void> _handleGoogleSignIn() async {
-    setState(() {
+    _safeSetState(() {
       _isBusy = true;
       _error = null;
     });
@@ -203,11 +209,11 @@ class _AuthScreenState extends State<AuthScreen> {
       );
       await FirebaseAuth.instance.signInWithCredential(credential);
     } on FirebaseAuthException catch (e) {
-      setState(() {
+      _safeSetState(() {
         _error = e.message ?? 'Falha ao autenticar com Google.';
       });
     } finally {
-      setState(() {
+      _safeSetState(() {
         _isBusy = false;
       });
     }
@@ -215,7 +221,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   // Autentica via Microsoft.
   Future<void> _handleMicrosoftSignIn() async {
-    setState(() {
+    _safeSetState(() {
       _isBusy = true;
       _error = null;
     });
@@ -225,11 +231,11 @@ class _AuthScreenState extends State<AuthScreen> {
       provider.addScope('profile');
       await FirebaseAuth.instance.signInWithProvider(provider);
     } on FirebaseAuthException catch (e) {
-      setState(() {
+      _safeSetState(() {
         _error = e.message ?? 'Falha ao autenticar com Microsoft.';
       });
     } finally {
-      setState(() {
+      _safeSetState(() {
         _isBusy = false;
       });
     }
